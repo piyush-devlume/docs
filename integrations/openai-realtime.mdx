@@ -1,0 +1,153 @@
+---
+title: "Connect Vobiz SIP to the OpenAI Realtime API"
+description: "Route Vobiz SIP calls to the OpenAI Realtime API for live AI voice conversations. Covers webhook setup, bridge server configuration, and environment variables."
+sidebarTitle: "OpenAI Realtime"
+---
+
+This guide shows you how to route inbound calls on a Vobiz phone number directly to the OpenAI Realtime API, enabling low-latency AI voice conversations. When someone calls your Vobiz number, Vobiz forwards the SIP call to OpenAI's SIP endpoint. OpenAI then sends a webhook to your service, which accepts the call and establishes a WebSocket session for bidirectional audio streaming.
+
+**Architecture:**
+
+```text
+Caller → Vobiz SIP Trunk → OpenAI SIP Endpoint → Webhook → Your Service → OpenAI Realtime API
+```
+
+## Prerequisites
+
+- An OpenAI account with an API key, project ID, and webhook secret — [OpenAI Platform](https://platform.openai.com)
+- A Vobiz account with a SIP trunk and a phone number assigned
+- Python 3.8 or later and ngrok for local development
+
+## Step 1: Configure Vobiz
+
+Point your Vobiz inbound SIP trunk at the OpenAI SIP endpoint.
+
+<Steps>
+  <Step title="Create an Origination URI">
+    In the Vobiz Console, navigate to [Origination URIs](https://console.vobiz.ai/app/sip/in/uri) and add a new URI.
+
+    Set the destination to your OpenAI project SIP URI:
+
+    ```text
+    proj_xyz123@sip.api.openai.com:5061
+    ```
+
+    <Warning>
+    You must explicitly include port `5061`. OpenAI's SIP endpoint will not accept connections on the default port 5060.
+    </Warning>
+  </Step>
+  <Step title="Create an Inbound Trunk">
+    Navigate to [Inbound Trunks](https://console.vobiz.ai/app/sip/in/trunks) and create a new trunk. Attach the Origination URI you just created and associate your active Vobiz phone number with this trunk.
+  </Step>
+</Steps>
+
+## Step 2: Install dependencies
+
+```bash
+# Create and activate virtual environment
+python -m venv venv
+venv/Scripts/activate   # Windows
+# source venv/bin/activate  # macOS/Linux
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+## Step 3: Configure environment variables
+
+Copy `.env.example` to `.env` and fill in your credentials:
+
+```env
+# OpenAI configuration
+OPENAI_API_KEY=sk-your-api-key-here
+OPENAI_PROJECT_ID=proj_r9BlSVZT8fTiZqmL5BwIN4z8
+OPENAI_WEBHOOK_SECRET=whsec-your-webhook-secret-here
+OPENAI_PROMPT_ID=pmpt_69b443cf6f088190a704075d0ce92ae30555b4ac58111073
+
+# Debug — set to false in production
+SKIP_SIGNATURE_VALIDATION=false
+
+# Vobiz configuration
+VOBIZ_PHONE_NUMBER=+918046733659
+
+# Service configuration
+SERVICE_PORT=8000
+
+# AI configuration
+AI_INSTRUCTIONS=You are a helpful customer support agent
+AI_VOICE=alloy
+```
+
+| Variable | Where to find it |
+|---|---|
+| `OPENAI_API_KEY` | [OpenAI API Keys](https://platform.openai.com/api-keys) |
+| `OPENAI_PROJECT_ID` | [Organization Settings](https://platform.openai.com/settings/organization/general) — copy the `proj_xxxxx` value |
+| `OPENAI_WEBHOOK_SECRET` | Generated in Step 4 below |
+
+## Step 4: Configure the OpenAI webhook
+
+OpenAI needs to know where to send incoming call notifications.
+
+<Steps>
+  <Step title="Start your service">
+    Run `python app.py`. The service starts ngrok automatically and prints the public tunnel URL in the console output.
+  </Step>
+  <Step title="Copy the ngrok URL">
+    Copy the URL displayed (e.g. `https://abc123.ngrok.io`).
+  </Step>
+  <Step title="Configure the webhook in OpenAI">
+    Go to [OpenAI Webhooks Settings](https://platform.openai.com/settings/organization/webhooks) and configure:
+
+    | Field | Value |
+    |---|---|
+    | Endpoint URL | `https://abc123.ngrok.io/webhook/incoming` |
+    | Event Type | `realtime.call.incoming` |
+  </Step>
+  <Step title="Copy the webhook secret">
+    After saving the webhook, copy the generated webhook secret. Update `OPENAI_WEBHOOK_SECRET` in your `.env` file and restart the service.
+  </Step>
+</Steps>
+
+## Step 5: Run the service
+
+### Local development (with ngrok)
+
+```bash
+python app.py
+```
+
+The service automatically starts a ngrok tunnel, prints the webhook URL, and launches the HTTP server. Point OpenAI's webhook to the displayed URL.
+
+### Production deployment
+
+Deploy to a host with a static public HTTPS URL (Render, Railway, AWS EC2, or Google Cloud Run).
+
+- HTTPS is required by OpenAI.
+- Use a production WSGI server: `gunicorn -w 4 -b 0.0.0.0:8000 app:app`
+- Set `SKIP_SIGNATURE_VALIDATION=false`.
+
+## Step 6: Test the integration
+
+### Verify the webhook
+
+1. Go to [OpenAI Webhooks](https://platform.openai.com/settings/organization/webhooks) and click **Send test event**.
+2. Select event type `realtime.call.incoming` and click **Send**.
+3. Your service logs should show `Received webhook` and OpenAI should report `HTTP 200`.
+
+### Test a real call
+
+Dial your Vobiz number. The AI should answer within 2–3 seconds and begin a conversation.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Webhook returns 401 Invalid Signature">
+    Verify that `OPENAI_WEBHOOK_SECRET` in `.env` matches the secret shown in the OpenAI webhooks page. Check for extra spaces or quotes. Restart the service after updating. Use `SKIP_SIGNATURE_VALIDATION=true` only for debugging—never in production.
+  </Accordion>
+  <Accordion title="Call gets 500 error from OpenAI">
+    The webhook endpoint is not reachable. Confirm your ngrok tunnel is running and the URL is entered correctly in OpenAI. Use the **Send test event** button to validate connectivity before placing a real call.
+  </Accordion>
+  <Accordion title="No session found for call_id in logs">
+    This is expected when using OpenAI's **Send test event** button—OpenAI uses a fake call ID for test events. Perform a real phone call to test actual audio streaming.
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,242 @@
+---
+title: "Integrate Vobiz SIP trunking with LiveKit AI agents"
+description: "Connect Vobiz SIP to LiveKit for real-time AI voice agents. Covers outbound calling, inbound dispatch rules, SIP call transfer, and troubleshooting."
+sidebarTitle: "LiveKit"
+---
+
+This guide shows you how to integrate Vobiz SIP trunking with LiveKit so your AI agents can make and receive real phone calls. You will configure a Vobiz outbound SIP trunk, connect it to LiveKit, dispatch outbound calls from Python, and set up inbound dispatch rules so callers reach your agent automatically.
+
+**Integration flows:**
+
+```text
+Outbound:  Your App → LiveKit → Vobiz → Phone Network
+Inbound:   Phone Network → Vobiz → LiveKit → AI Agent
+```
+
+## Prerequisites
+
+- A Vobiz account with active balance — [sign up](https://vobiz.ai)
+- A LiveKit Cloud project — [sign up](https://cloud.livekit.io)
+- A LiveKit AI agent built and ready — [LiveKit Agents docs](https://docs.livekit.io/agents)
+
+## Part 1: Vobiz setup
+
+### Create an outbound SIP trunk
+
+<Steps>
+  <Step title="Open Trunks">
+    Log in to the [Vobiz Console](https://console.vobiz.ai) and navigate to **SIP Trunk → Outbound Trunks → Trunks**.
+  </Step>
+  <Step title="Create the trunk">
+    Click **+ Create Trunk**, enter a name (e.g. `LiveKit Integration`) and an optional description. Under **Authentication & Linking**, select a credential from the list or click **+ Create New Credential**.
+  </Step>
+  <Step title="Save and copy credentials">
+    Click **+ Create Trunk** to save. Scroll to the **Authentication & Linking** section and copy the following values—you will need them in Part 3:
+
+    | Credential | Example |
+    |---|---|
+    | SIP Domain (Gateway URL) | `<your_domain>.sip.vobiz.ai` |
+    | Username | `<your_username>` |
+    | Password | `<your_password>` |
+  </Step>
+</Steps>
+
+### Get a phone number
+
+Purchase a phone number in the Vobiz Console for outbound caller ID and inbound call routing. See the [Phone Numbers documentation](https://www.docs.vobiz.ai/numbers).
+
+## Part 2: LiveKit setup
+
+### Get LiveKit credentials
+
+<Steps>
+  <Step title="Open your project settings">
+    Go to [LiveKit Cloud](https://cloud.livekit.io), select your project, and navigate to **Settings**.
+  </Step>
+  <Step title="Copy these three values">
+    | Variable | Location |
+    |---|---|
+    | `LIVEKIT_URL` | Settings → General |
+    | `LIVEKIT_API_KEY` | Settings → API Keys |
+    | `LIVEKIT_API_SECRET` | Settings → API Keys |
+  </Step>
+</Steps>
+
+```bash
+LIVEKIT_URL=wss://your-project.livekit.cloud
+LIVEKIT_API_KEY=APIxxxxxxxxxxxxx
+LIVEKIT_API_SECRET=secretxxxxxxxxxx
+```
+
+## Part 3: Connect LiveKit to Vobiz (outbound)
+
+### Initialize the LiveKit API client
+
+```python
+from livekit import api as livekit_api
+
+lk = livekit_api.LiveKitAPI(
+    url="YOUR_LIVEKIT_URL",
+    api_key="YOUR_LIVEKIT_API_KEY",
+    api_secret="YOUR_LIVEKIT_API_SECRET"
+)
+```
+
+### Create an outbound SIP trunk in LiveKit
+
+Run this once during initial setup to register your Vobiz credentials with LiveKit.
+
+```python
+trunk = await lk.sip.create_sip_outbound_trunk(
+    livekit_api.CreateSIPOutboundTrunkRequest(
+        trunk=livekit_api.SIPOutboundTrunkInfo(
+            name="Vobiz Trunk",
+            address="YOUR_VOBIZ_SIP_DOMAIN",       # e.g. bfab10fb.sip.vobiz.ai
+            auth_username="YOUR_VOBIZ_USERNAME",
+            auth_password="YOUR_VOBIZ_PASSWORD",
+            numbers=["YOUR_PHONE_NUMBER"]           # E.164 format
+        )
+    )
+)
+
+# Save trunk.sip_trunk_id — you need it when dispatching calls
+print("Trunk ID:", trunk.sip_trunk_id)
+```
+
+**Field mapping:**
+
+| Vobiz field | LiveKit field |
+|---|---|
+| `sip_domain` | `address` |
+| `username` | `auth_username` |
+| `password` | `auth_password` |
+| Your phone number | `numbers` (array) |
+
+## Part 4: Make outbound calls
+
+```python
+participant = await lk.sip.create_sip_participant(
+    livekit_api.CreateSIPParticipantRequest(
+        sip_trunk_id="YOUR_TRUNK_ID",    # From Part 3
+        sip_call_to="+1234567890",       # Destination in E.164 format
+        room_name="call-room"            # LiveKit room name
+    )
+)
+```
+
+**What happens:**
+
+1. LiveKit sends a SIP INVITE through Vobiz to the PSTN.
+2. When the person answers, they join the LiveKit room as a SIP participant.
+3. Your AI agent joins the same room and the conversation begins.
+
+For a complete working example, see the [LiveKit outbound example](/examples/livekit-vobiz-outbound).
+
+## Part 5: Configure inbound calling
+
+### Step 1: Get your LiveKit SIP URI
+
+<Steps>
+  <Step title="Open project settings">
+    Go to [LiveKit Cloud](https://cloud.livekit.io), select your project, and navigate to **Settings → Project**.
+  </Step>
+  <Step title="Copy the SIP URI">
+    Find the **SIP URI** field. It looks like `sip:your-sip-uri.sip.livekit.cloud`.
+  </Step>
+</Steps>
+
+### Step 2: Set Vobiz inbound destination
+
+Update your Vobiz trunk so inbound calls route to LiveKit. Remove the `sip:` prefix before entering the value in Vobiz.
+
+<Warning>
+Vobiz requires the inbound destination without the `sip:` prefix. Enter `your-sip-uri.sip.livekit.cloud`, not `sip:your-sip-uri.sip.livekit.cloud`.
+</Warning>
+
+```bash
+PATCH https://api.vobiz.ai/api/v1/account/{auth_id}/trunks/{trunkId}
+```
+
+```json
+{
+  "inbound_destination": "your-sip-uri.sip.livekit.cloud"
+}
+```
+
+### Step 3: Create a LiveKit inbound trunk
+
+1. In the LiveKit dashboard, go to **Telephony → Trunks** and click **Create new trunk → Inbound**.
+2. Set **Phone Numbers** to your Vobiz number (e.g. `+918071387434`).
+3. Set **Allowed Addresses** to `0.0.0.0/0` for development (restrict in production).
+4. Click **Create** and save the **Trunk ID**.
+
+### Step 4: Create a dispatch rule
+
+Dispatch rules tell LiveKit to automatically spawn an AI agent room when a call arrives.
+
+1. Go to **Telephony → Dispatch Rules** and click **Create new dispatch rule**.
+2. Configure:
+   - **Rule Type:** Individual
+   - **Room Prefix:** `call-`
+   - **Match Trunks:** Select your inbound trunk
+3. Expand **Agent dispatch** and set **Agent Name** to match your agent exactly (e.g. `voice-assistant`).
+4. Click **Create**.
+
+For a complete working example, see the [LiveKit inbound example](/examples/livekit-vobiz-inbound).
+
+## Part 6: SIP call transfer
+
+Your LiveKit agent can transfer an active call to a human agent or another department using SIP REFER.
+
+### Default transfer
+
+Ask the agent to transfer with a phrase like `"Transfer me"` or `"Transfer me to a live agent"`. The agent sends a SIP REFER to the configured default transfer number.
+
+### Custom transfer
+
+Ask the agent to transfer to a specific number: `"Transfer me to +1 555 000 1234"`. The agent constructs the SIP URI and executes the transfer.
+
+**Transfer troubleshooting:**
+
+| Error | Cause | Fix |
+|---|---|---|
+| Status 500 (Max Auth Retry) | Incorrect SIP credentials on trunk | Re-run `setup_trunk.py` to update credentials |
+| Status 408 (Timeout) | Invalid SIP URI or provider blocking | Verify `VOBIZ_SIP_DOMAIN` in `.env`; enable "Call Transfer (SIP REFER)" in Vobiz settings |
+| Status 400 (Invalid argument) | Destination is not a full URI | Ensure the code prepends `sip:` and appends `@domain` automatically |
+| Disconnects but no ring | Transfer succeeded but destination failed | Check the destination number and Vobiz SIP logs |
+
+## Required credentials reference
+
+| Credential | Where to get it | Used for |
+|---|---|---|
+| Vobiz SIP domain | Vobiz Console → Trunks | LiveKit trunk `address` |
+| Vobiz username | Vobiz Console → Trunks | LiveKit trunk `auth_username` |
+| Vobiz password | Vobiz Console → Trunks | LiveKit trunk `auth_password` |
+| Vobiz phone number | Vobiz Console → Numbers | LiveKit trunk `numbers` |
+| LiveKit SIP URI | LiveKit Settings → Project | Vobiz `inbound_destination` |
+| LiveKit trunk ID | LiveKit Telephony → Trunks | Dispatching calls |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Outbound call doesn't connect">
+    Verify that the `address` field in your LiveKit trunk matches your exact Vobiz `sip_domain` (e.g. `bfab10fb.sip.vobiz.ai`). Using the generic `sip.vobiz.ai` will fail. Check credentials match exactly.
+  </Accordion>
+  <Accordion title="SIP 401 Unauthorized">
+    Confirm your `auth_username` and `auth_password` match the values in **Vobiz Console → Trunks**.
+  </Accordion>
+  <Accordion title="Inbound call disconnects immediately">
+    Verify the Vobiz `inbound_destination` does not include the `sip:` prefix. Confirm your Vobiz phone number is added to the LiveKit inbound trunk. Set `allowed_addresses` to `0.0.0.0/0` during testing.
+  </Accordion>
+  <Accordion title="Agent doesn't answer inbound calls">
+    Check that your agent process is running and that the dispatch rule has **Agent dispatch** configured with a name that exactly matches your agent (e.g. `voice-assistant`). The dispatch rule must be linked to the correct inbound trunk.
+  </Accordion>
+  <Accordion title="Insufficient balance">
+    Check your Vobiz balance at [console.vobiz.ai](https://console.vobiz.ai) and add funds if needed.
+  </Accordion>
+</AccordionGroup>
+
+## Example repositories
+
+- [LiveKit Vobiz Outbound](https://github.com/vobiz-ai/LiveKit-Vobiz-Outbound) — outbound calling and SIP transfer
+- [LiveKit Vobiz Inbound](https://github.com/vobiz-ai/Livekit-vobiz-inbound) — inbound dispatch rule setup

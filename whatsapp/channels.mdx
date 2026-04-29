@@ -1,0 +1,214 @@
+---
+title: "WhatsApp Channel Management on Vobiz"
+description: "Connect and manage WhatsApp Business channels on Vobiz. Choose from BYON, a Vobiz-purchased number, or direct connection to get started."
+sidebarTitle: "Channels"
+---
+
+A channel in Vobiz represents a WhatsApp Business phone number connected to your account. Each channel handles conversations, sends messages, and runs campaigns independently. You can connect multiple channels to manage different business lines, regions, or brands from a single Vobiz account.
+
+## Connection methods
+
+Choose the method that matches how you want to provision your WhatsApp number.
+
+<CardGroup cols={3}>
+  <Card title="Bring Your Own Number (BYON)" icon="phone">
+    Connect your existing WhatsApp Business account using Meta Business Manager credentials. You keep full ownership of your number and WABA.
+  </Card>
+  <Card title="Buy from Vobiz" icon="cart-shopping">
+    Purchase a new WhatsApp-capable number directly through Vobiz. The number is pre-configured and ready to use immediately.
+  </Card>
+  <Card title="Direct connection" icon="plug">
+    Connect using existing WhatsApp Cloud API credentials for advanced users who already have a Cloud API integration.
+  </Card>
+</CardGroup>
+
+### BYON (Bring Your Own Number)
+
+BYON is the recommended method when you already own a business phone number. You connect your existing WhatsApp Business Account (WABA) to Vobiz by providing credentials from Meta Business Manager.
+
+**What you need:**
+- An active Meta Business Account
+- A WhatsApp Business Account (WABA) with a verified phone number
+- A system user access token with `whatsapp_business_messaging` and `whatsapp_business_management` permissions
+
+**Advantages:**
+- No additional cost for the number itself
+- Full ownership and portability of your WABA
+- Direct integration with Meta's platform
+
+See the [BYON setup guide](#byon-setup-guide) below for step-by-step instructions.
+
+### Buy from Vobiz
+
+Purchase a new number directly from Vobiz when you don't have an existing number to use. Vobiz provisions the number and handles all setup on your behalf.
+
+**What you get:**
+- Instant number provisioning — no OTP verification needed
+- A choice of numbers across multiple countries
+- Vobiz manages the Meta configuration
+
+A monthly fee applies for numbers purchased through Vobiz.
+
+### Direct connection
+
+Direct connection is for teams that already use the WhatsApp Cloud API and want to route events and management through Vobiz. It offers maximum flexibility including custom webhook configurations and access to advanced API features.
+
+---
+
+## Channel types
+
+### Production channels
+
+Fully verified channels used for live customer communications. These channels require business verification and support higher messaging volumes.
+
+- Business verification required (can take 1–3 business days with Meta)
+- Daily messaging limit of 1,000+ messages (increases with quality rating)
+- Display name shows a verified badge
+- All template categories available (Utility, Marketing, Authentication)
+
+### Test/sandbox channels
+
+Development channels for testing your integration before going live. Sandbox channels are limited to verified test numbers and lower volumes.
+
+- No business verification required
+- Maximum 50 messages per day
+- Can only send to pre-verified test phone numbers
+- Ideal for building and validating your integration
+
+---
+
+## Connecting a channel
+
+<Steps>
+  <Step title="Open the Channels page">
+    In the [Vobiz Console](https://console.vobiz.ai), go to **Messaging → Channels** and click **Connect Channel**.
+  </Step>
+  <Step title="Select your connection method">
+    Choose **BYON**, **Buy from Vobiz**, or **Direct Connection** depending on your situation.
+  </Step>
+  <Step title="Enter your credentials">
+    For BYON, provide your WABA ID, Phone Number ID, access token, and display name from Meta Business Manager. For Vobiz-purchased numbers, follow the purchase flow. For direct connection, supply your Cloud API credentials.
+  </Step>
+  <Step title="Verify and connect">
+    For BYON, complete OTP verification via SMS or voice call. Once verified, your channel appears in the Channels list with a **Connected** status.
+  </Step>
+</Steps>
+
+---
+
+## BYON setup guide
+
+This section walks through the complete process of connecting your own number via BYON, from configuring Meta Business Manager to completing the Vobiz connection.
+
+<Note>
+  The phone number you use cannot be currently registered with the WhatsApp Business app or WhatsApp Messenger. If it is, deregister it from those apps first.
+</Note>
+
+### Step 1 — Set up Meta Business Manager
+
+1. Go to [business.facebook.com](https://business.facebook.com) and log in with your Facebook account.
+2. If you don't have a business yet, click **Create Account** and enter your business name and details. Use your official business name — Meta requires it to match your business registration for verification.
+3. Once your business is ready, proceed to create a WhatsApp Business Account.
+
+### Step 2 — Create a WhatsApp Business Account (WABA)
+
+1. In Meta Business Manager, open the menu and navigate to **Accounts → WhatsApp Accounts**.
+2. Click **Add** and select **Create a WhatsApp Business Account**.
+3. Fill in your WhatsApp Business Account Name, select your Business Manager, and set your timezone.
+4. After creation, copy your **WABA ID** — a 15–17-digit numeric value (e.g., `102290129340398`). You'll need it for Vobiz.
+
+### Step 3 — Add and verify your phone number
+
+1. Inside your new WABA, click **Add phone number**.
+2. Enter your number in international format (e.g., `+1 234 567 8900`) and select a verification method: SMS or voice call.
+3. Enter the six-digit code you receive. A green checkmark confirms success.
+4. Click your verified phone number to view its details and copy the **Phone Number ID** (e.g., `106540932419283`).
+
+### Step 4 — Create a system user and generate an access token
+
+1. Go to **Business Settings → Users → System Users** and click **Add**.
+2. Enter a name (e.g., `Vobiz Integration`), set the role to **Admin**, and click **Create System User**.
+3. Click the new system user, then **Add Assets → WhatsApp Accounts**. Select your WABA and enable **Full control**, then save.
+4. Click **Generate New Token**, select your app (or create one at [developers.facebook.com](https://developers.facebook.com)), and enable the `whatsapp_business_messaging` and `whatsapp_business_management` permissions.
+5. Click **Generate Token** and copy it immediately.
+
+<Warning>
+  Copy the access token as soon as it is generated. You cannot view it again after closing the dialog. Store it securely — this token grants full access to your WhatsApp Business Account.
+</Warning>
+
+### Step 5 — Connect to Vobiz
+
+1. Log in to [console.vobiz.ai](https://console.vobiz.ai) and go to **Messaging → Channels → Connect Channel → Bring Your Own Number (BYON)**.
+2. Fill in the form:
+
+   | Field | Value |
+   | --- | --- |
+   | **WABA ID** | The ID from Step 2 (e.g., `102290129340398`) |
+   | **Phone Number ID** | The ID from Step 3 (e.g., `106540932419283`) |
+   | **Access Token** | The token from Step 4 (starts with `EAA...`) |
+   | **Display Name** | Your business name as customers will see it |
+
+3. Click **Connect Channel**. Vobiz verifies your credentials and connects.
+
+### Troubleshooting BYON errors
+
+<AccordionGroup>
+  <Accordion title="Invalid Access Token">
+    **Causes:** Token has expired, was regenerated, lacks required permissions, or the system user doesn't have access to the WABA.
+
+    **Fix:** Generate a new token with `whatsapp_business_messaging` and `whatsapp_business_management` permissions. Confirm the system user has **Full control** on the WABA. Paste the full token without extra whitespace.
+  </Accordion>
+
+  <Accordion title="Phone Number Not Found">
+    **Causes:** Incorrect Phone Number ID, phone number not verified in Meta, or number not associated with the WABA.
+
+    **Fix:** Re-copy the Phone Number ID from Meta Business Manager. Confirm the number has a green checkmark (verified) and belongs to the correct WABA.
+  </Accordion>
+
+  <Accordion title="WABA Not Accessible">
+    **Causes:** Incorrect WABA ID, WABA is suspended or restricted, or the system user hasn't been assigned to the WABA.
+
+    **Fix:** Verify the WABA ID in Meta Business Settings. Check the WABA status in Meta Business Manager. Confirm the system user has been assigned to the WABA with Full control.
+  </Accordion>
+
+  <Accordion title="Can't generate access token">
+    **Causes:** No Meta app exists, or you lack Admin permissions in Business Manager.
+
+    **Fix:** Create a Meta app at [developers.facebook.com](https://developers.facebook.com), add the WhatsApp product to it, and confirm you have Admin role in Business Manager.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Managing multiple channels
+
+Once you have channels connected, the Channels dashboard gives you a real-time view of all of them. For each channel you can see:
+
+- **Connection status** — Active, disconnected, or pending verification
+- **Message limits** — Current usage vs. daily limits
+- **Quality rating** — Meta's quality score (Green, Yellow, or Red)
+- **Active conversations** — Number of open 24-hour messaging windows
+- **Recent activity** — Messages sent and received in the last 7 days
+
+### Best practices
+
+**Monitor your quality rating.** Respond promptly to customers, avoid spam, and make sure every message adds value. A low quality rating triggers reduced messaging limits from Meta.
+
+**Use separate channels for separate purposes.** Dedicated channels for customer support, marketing, and notifications make it easier to track performance and manage conversations.
+
+**Keep credentials secure.** Never share your WhatsApp API access tokens. Rotate them periodically and use webhook signature verification on your endpoints.
+
+**Respect rate limits.** Each channel has daily limits tied to its quality rating and number tier. Monitor usage in the dashboard and implement backoff logic in your code to handle `429` responses gracefully.
+
+---
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Messaging" href="/whatsapp/messaging">
+    Send text, media, and template messages and manage conversations in the inbox.
+  </Card>
+  <Card title="Webhooks" href="/whatsapp/webhooks">
+    Receive real-time events for incoming messages, delivery status, and more.
+  </Card>
+</CardGroup>

@@ -1,0 +1,75 @@
+---
+title: "Call Management: Voice API Overview"
+description: "Manage outbound and inbound calls with Vobiz — initiate calls, transfer, record, play audio, send DTMF, and detect answering machines."
+---
+
+The Vobiz Call API gives you complete programmatic control over voice calls. A Call object is created whenever an outbound call is initiated or an inbound call is received. Use it to interact with live calls, retrieve call details, build dynamic call flows, and automate every step of the call lifecycle.
+
+## Base URL
+
+```
+https://api.vobiz.ai/api
+```
+
+## Endpoint
+
+```
+https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/
+```
+
+## Authentication
+
+Every request requires two headers identifying your account.
+
+| Header | Description |
+|---|---|
+| `X-Auth-ID` | Your Vobiz account Auth ID |
+| `X-Auth-Token` | Your Vobiz account Auth Token |
+
+```bash
+X-Auth-ID: YOUR_AUTH_ID
+X-Auth-Token: YOUR_AUTH_TOKEN
+Content-Type: application/json
+```
+
+<Info>
+  You can find your Auth ID and Auth Token in the Vobiz console under account settings.
+</Info>
+
+## Call operations
+
+<CardGroup cols={2}>
+  <Card title="Make a call" icon="phone" href="/call/make-call">
+    Initiate an outbound call to a PSTN number or SIP endpoint. Supports bulk simultaneous calls.
+  </Card>
+  <Card title="Machine detection" icon="robot" href="/call/machine-detection">
+    Detect answering machines on outbound calls using synchronous or asynchronous detection modes.
+  </Card>
+  <Card title="Transfer a call" icon="arrow-right-arrow-left" href="/call/transfer-call">
+    Redirect an active call to a new XML URL. Transfer the A-leg, B-leg, or both independently.
+  </Card>
+  <Card title="Hang up a call" icon="phone-xmark" href="/call/hangup-call">
+    Terminate an active call or cancel a queued outbound call programmatically.
+  </Card>
+  <Card title="Retrieve a live call" icon="circle-dot" href="/call/retrieve-live-call">
+    Fetch real-time details for a specific ongoing call by its UUID.
+  </Card>
+  <Card title="Retrieve all live calls" icon="list" href="/call/retrieve-all-live-calls">
+    Get an array of UUIDs for every call currently active on your account.
+  </Card>
+  <Card title="Record calls" icon="circle-record" href="/call/record-calls">
+    Start and stop recording on active calls. Supports MP3 and WAV formats with auto-transcription.
+  </Card>
+  <Card title="Play audio" icon="volume-high" href="/call/play-audio">
+    Play audio files during active calls with looping, leg selection, and duration control.
+  </Card>
+  <Card title="Speak text" icon="waveform" href="/call/speak-text">
+    Convert text to speech and play it on an active call. Supports 29 languages and multiple voices.
+  </Card>
+  <Card title="DTMF" icon="dial-pad" href="/call/dtmf">
+    Send DTMF tones on active calls to automate IVR navigation and keypad interactions.
+  </Card>
+  <Card title="The Call object" icon="cube" href="/call/call-object">
+    Reference for all fields returned on a Call object including status, duration, and billing.
+  </Card>
+</CardGroup>

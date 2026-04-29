@@ -1,0 +1,91 @@
+---
+title: "The Stream Object: Audio Stream API Reference"
+sidebarTitle: "The stream object"
+description: "Complete structure and field reference for the Vobiz audio Stream object, including status, timing, codec, and configuration attributes."
+---
+
+The Stream object represents an audio stream attached to an active call. It captures the configuration you provided when starting the stream — WebSocket URL, codec, track, and bidirectional mode — along with runtime metadata such as current status, start time, and end time.
+
+<Note>
+  A single call may have multiple concurrent streams. Each stream is identified by a unique `stream_id` and can be stopped independently without affecting other streams on the same call.
+</Note>
+
+## Attributes
+
+<ResponseField name="stream_id" type="string">
+  Unique identifier for this stream. Use this value in all subsequent API operations — retrieving, stopping, or inspecting this specific stream.
+</ResponseField>
+
+<ResponseField name="call_uuid" type="string">
+  The UUID of the call this stream is attached to.
+</ResponseField>
+
+<ResponseField name="service_url" type="string">
+  WebSocket URL (`wss://` or `ws://`) to which Vobiz forwards the forked audio. In production, this must be a publicly reachable `wss://` endpoint.
+</ResponseField>
+
+<ResponseField name="audio_track" type="string">
+  Which audio track is being streamed. One of `inbound`, `outbound`, or `both`.
+</ResponseField>
+
+<ResponseField name="bidirectional" type="boolean">
+  Whether the WebSocket is also allowed to send audio back into the call. When `true`, only `inbound` is supported as the `audio_track`.
+</ResponseField>
+
+<ResponseField name="content_type" type="string">
+  Audio encoding format. One of `audio/x-l16` or `audio/x-mulaw`.
+</ResponseField>
+
+<ResponseField name="sampling_rate" type="integer">
+  Audio sample rate in Hz. One of `8000` or `16000`.
+</ResponseField>
+
+<ResponseField name="stream_timeout" type="integer">
+  Maximum stream duration in seconds. Vobiz automatically stops the stream when this limit is reached. Default is `86400` (24 hours).
+</ResponseField>
+
+<ResponseField name="status_callback_url" type="string">
+  URL invoked via HTTP POST when the stream status changes. Events sent to this URL: `connected`, `stopped`, `timeout`, `failed`.
+</ResponseField>
+
+<ResponseField name="status_callback_method" type="string">
+  HTTP method used to invoke `status_callback_url`. One of `GET` or `POST`. Default: `POST`.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Current status of the stream. One of `in-progress`, `completed`, or `failed`.
+</ResponseField>
+
+<ResponseField name="start_time" type="string">
+  Timestamp when the stream started, in ISO 8601 format with timezone offset.
+</ResponseField>
+
+<ResponseField name="end_time" type="string">
+  Timestamp when the stream ended. Returns `null` while the stream is still active.
+</ResponseField>
+
+<ResponseField name="resource_uri" type="string">
+  Relative URI of this Stream resource. Use this to construct the full URL for subsequent API calls to this stream.
+</ResponseField>
+
+## Example object
+
+```json
+{
+  "api_id": "15b27100-1231-11ee-b875-0242ac110003",
+  "call_uuid": "6e558798-499c-4a68-bc77-46f2c53d1f69",
+  "stream_id": "2b1b3f8e-4c9a-4f2a-9e2d-7f9d0b1c2a34",
+  "service_url": "wss://example.com/audio-stream",
+  "audio_track": "inbound",
+  "bidirectional": false,
+  "content_type": "audio/x-l16",
+  "sampling_rate": 8000,
+  "stream_timeout": 86400,
+  "status_callback_url": "https://example.com/stream-status",
+  "status_callback_method": "POST",
+  "status": "in-progress",
+  "start_time": "2025-11-06 13:49:10+00:00",
+  "end_time": null,
+  "resource_uri": "/v1/Account/MA_PU0XU668/Call/6e558798-499c-4a68-bc77-46f2c53d1f69/Stream/2b1b3f8e-4c9a-4f2a-9e2d-7f9d0b1c2a34/"
+}
+```

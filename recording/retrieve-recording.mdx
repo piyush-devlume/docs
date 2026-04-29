@@ -1,0 +1,128 @@
+---
+title: "Retrieve a specific recording by its ID"
+description: "GET a recording by ID to retrieve the download URL, associated call UUID and details, storage duration, and billing cost metadata."
+sidebarTitle: "Retrieve recording"
+---
+
+Use this endpoint to retrieve the full details of a specific recording using its `recording_id`. The response includes the direct download URL, call association, storage duration, billing information, and precise timing data. You can obtain a `recording_id` from the List All Recordings endpoint or from webhook notifications when recordings are created.
+
+**GET** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Recording/{recording_id}/`
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+<ParamField path="recording_id" type="string" required>
+  The unique identifier of the recording to retrieve.
+</ParamField>
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Recording/d7801b2e-e76d-4dd8-be9c-9e015a7267b8/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+recording_id = "d7801b2e-e76d-4dd8-be9c-9e015a7267b8"
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Recording/{recording_id}/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.get(url, headers=headers)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const recordingId = "d7801b2e-e76d-4dd8-be9c-9e015a7267b8";
+
+const response = await axios.get(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Recording/${recordingId}/`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response fields
+
+The response wraps the recording in a standard list response envelope. See the [Recording object](/recording/recording-object) for complete field descriptions.
+
+<ResponseField name="api_id" type="string">
+  Unique identifier for this API request. Use this for support or debugging.
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata including `limit`, `offset`, and `total_count`.
+</ResponseField>
+
+<ResponseField name="objects" type="array">
+  Array containing the single matching recording object.
+</ResponseField>
+
+## Example response
+
+```json 200 OK
+{
+  "api_id": "668470b7-7a8f-49b6-9011-50075754a50a",
+  "meta": {
+    "limit": 20,
+    "next": null,
+    "offset": 0,
+    "previous": null,
+    "total_count": 1
+  },
+  "objects": [
+    {
+      "add_time": "2025-11-06 13:49:10.751756+00:00",
+      "call_uuid": "6e558798-499c-4a68-bc77-46f2c53d1f69",
+      "conference_name": null,
+      "from_number": "+918071387423",
+      "monthly_recording_storage_amount": 0,
+      "recording_duration_ms": "10080.00000",
+      "recording_end_ms": "1762436949502.00000",
+      "recording_format": "mp3",
+      "recording_id": "d7801b2e-e76d-4dd8-be9c-9e015a7267b8",
+      "recording_start_ms": "1762436939422.00000",
+      "recording_storage_duration": 1,
+      "recording_storage_rate": 0.005,
+      "recording_type": "call",
+      "recording_url": "https://media.vobiz.ai/api/v1/Account/MA_PU0XU668/Recording/d7801b2e-e76d-4dd8-be9c-9e015a7267b8.mp3",
+      "resource_uri": "/v1/Account/MA_PU0XU668/Recording/d7801b2e-e76d-4dd8-be9c-9e015a7267b8/",
+      "rounded_recording_duration": 60,
+      "to_number": "919624705678"
+    }
+  ]
+}
+```
+
+```json 404 Not Found
+{
+  "api_id": "correlation-id-uuid",
+  "error": "Recording not found"
+}
+```
+
+<Tip>
+  Use the `recording_url` from the response to download the audio file. Because the URL requires authentication, follow the [Download Recording](/recording/download-recording) guide to access the file correctly.
+</Tip>

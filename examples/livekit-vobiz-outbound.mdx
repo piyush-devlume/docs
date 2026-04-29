@@ -1,0 +1,95 @@
+---
+title: "LiveKit outbound calling with Vobiz SIP trunking"
+description: "Python example for AI-powered outbound calling with LiveKit and Vobiz SIP. Full SIP participant dispatch code, agent setup, and call flow walkthrough."
+sidebarTitle: "LiveKit outbound"
+---
+
+This example shows how to initiate outbound PSTN calls from a LiveKit AI agent using Vobiz SIP trunking. Your Python worker stays running as a long-lived daemon and handles the conversation once the called party answers—LiveKit manages all SIP signaling and media routing through Vobiz automatically.
+
+<Info>
+The full source code is available at [github.com/vobiz-ai/LiveKit-Vobiz-Outbound](https://github.com/vobiz-ai/LiveKit-Vobiz-Outbound).
+</Info>
+
+```bash
+git clone https://github.com/vobiz-ai/LiveKit-Vobiz-Outbound.git
+cd LiveKit-Vobiz-Outbound
+```
+
+## How it works
+
+Outbound calling requires your application to issue an API command rather than wait for an incoming SIP INVITE. The flow is:
+
+1. **Dispatch:** Your code calls `api.CreateSIPParticipantRequest`, passing your Vobiz outbound trunk ID and the E.164 destination number.
+2. **SIP signaling:** LiveKit sends a SIP INVITE to Vobiz, which dials out over the PSTN.
+3. **Answer:** When the called party answers, LiveKit joins the call to an internal room as a SIP participant.
+4. **Agent connection:** Your running `agent.py` worker detects the new room and fires its `on_enter()` lifecycle hook to start the conversation.
+
+<Note>
+SIP billing on Vobiz starts when the destination phone begins ringing, not when it is answered. Ensure your Vobiz account has sufficient balance before dispatching bulk campaigns.
+</Note>
+
+## Prerequisites
+
+- A Vobiz account with a configured outbound SIP trunk. See [integrations/livekit](/integrations/livekit) for trunk setup steps.
+- A LiveKit Cloud project with valid `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET`.
+- Python 3.10 or later.
+
+## Implementation
+
+The `make_call.py` runner issues a single authenticated REST call to LiveKit, which then coordinates all SIP signaling with Vobiz on your behalf.
+
+```python
+from livekit import api
+
+async def dispatch_outbound_call(target_phone_number: str):
+    """Dispatch an outbound SIP call through Vobiz via the LiveKit API."""
+    livekit_api = api.LiveKitAPI()
+
+    trunk_sip_id = "ST_xxxxxxxxxxx"  # Your Vobiz outbound trunk ID in LiveKit
+    room_name = f"outbound_session_{target_phone_number}"
+
+    # LiveKit sends SIP INVITE to Vobiz, which dials out over the PSTN
+    await livekit_api.sip.create_sip_participant(
+        api.CreateSIPParticipantRequest(
+            sip_trunk_id=trunk_sip_id,
+            sip_call_to=target_phone_number,
+            room_name=room_name,
+            participant_identity=f"sip_{target_phone_number}"
+        )
+    )
+```
+
+<Warning>
+Replace `ST_xxxxxxxxxxx` with the actual SIP trunk ID from your LiveKit dashboard (**Telephony → Trunks**). Using a placeholder will cause an authentication failure at the Vobiz boundary.
+</Warning>
+
+## Call flow diagram
+
+```text
+make_call.py
+    │
+    ├─► api.CreateSIPParticipantRequest (LiveKit REST)
+    │       │
+    │       └─► SIP INVITE ──► Vobiz SIP trunk ──► PSTN ──► Destination phone rings
+    │
+    └─► (destination answers)
+            │
+            └─► LiveKit room created
+                    │
+                    └─► agent.py on_enter() fires ──► AI conversation begins
+```
+
+## Configuration reference
+
+| Parameter | Description | Example |
+|---|---|---|
+| `sip_trunk_id` | LiveKit trunk ID linked to your Vobiz outbound trunk | `ST_abc123` |
+| `sip_call_to` | Destination phone number in E.164 format | `+15550001234` |
+| `room_name` | LiveKit room the participant joins | `outbound_session_+15550001234` |
+| `participant_identity` | Unique identity label for the SIP leg | `sip_+15550001234` |
+
+## Next steps
+
+- See [LiveKit inbound calling](/examples/livekit-vobiz-inbound) to handle the reverse flow.
+- See the [LiveKit integration guide](/integrations/livekit) for full trunk setup including credentials and dispatch rules.
+- For answering machine detection before handing off to an AI agent, see the [AMD example repository](https://github.com/vobiz-ai/Livekit-Vobiz-Machine-Detection-Agent-example).

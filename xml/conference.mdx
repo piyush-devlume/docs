@@ -1,0 +1,119 @@
+---
+title: "Conference Element: Connect Callers to a Shared Room"
+description: "Conference element connects callers to a named room. Multiple participants join simultaneously for group calls, support queues, and live event broadcasting."
+sidebarTitle: "Conference"
+---
+
+The `<Conference>` element connects the current caller to a named conference room. Any number of callers can join the same room simultaneously — Vobiz creates it automatically if it does not yet exist. Participants can hear and speak to one another until they hang up or are removed. Use `<Conference>` to build group calls, support hotlines with multiple agents, broadcast audio to listeners, or any scenario that requires more than two parties on one call.
+
+## Usage
+
+Specify the room name as the text content of the element. The name is case-sensitive and scoped to your account.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak>You are joining the conference now.</Speak>
+    <Conference>MyConferenceRoom</Conference>
+</Response>
+```
+
+Vobiz creates `MyConferenceRoom` when the first caller joins, then adds each subsequent caller who specifies the same name.
+
+<Note>
+  Room names are case-sensitive. `SalesTeam` and `salesteam` are two different rooms.
+</Note>
+
+## Examples
+
+### Basic conference room
+
+Join a named conference room immediately after a brief announcement.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak>Connecting you to the team meeting now.</Speak>
+    <Conference>WeeklyStandup</Conference>
+</Response>
+```
+
+### Moderator and participant roles
+
+Use different XML responses for the moderator and regular participants. The moderator joins first and the meeting starts when they arrive.
+
+**Moderator:**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak>You are the moderator. The conference will begin when participants join.</Speak>
+    <Conference>BoardMeeting-2026</Conference>
+</Response>
+```
+
+**Participant:**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak>Please hold. You will be connected to the conference shortly.</Speak>
+    <Conference>BoardMeeting-2026</Conference>
+</Response>
+```
+
+### Queue callers before joining
+
+Play hold music or a position announcement using `<Play>` or `<Speak>` before connecting to the room.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak>Thank you for calling. Please hold while we connect you to the next available agent.</Speak>
+    <Play loop="0">https://yourcdn.com/hold-music.mp3</Play>
+    <Conference>SupportQueue</Conference>
+</Response>
+```
+
+### Dynamic room names
+
+Generate room names programmatically in your application and inject them into the XML response. This example shows the XML your server would return for a specific ticket.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak>Joining your support session.</Speak>
+    <Conference>ticket-49201</Conference>
+</Response>
+```
+
+### Multiple callers in a team room
+
+Return identical XML from different webhook calls to put multiple callers in the same room.
+
+<Tabs>
+  <Tab title="Caller A">
+    ```xml
+    <?xml version="1.0" encoding="UTF-8"?>
+    <Response>
+        <Speak>Welcome, you are participant one.</Speak>
+        <Conference>EngineeringSync</Conference>
+    </Response>
+    ```
+  </Tab>
+  <Tab title="Caller B">
+    ```xml
+    <?xml version="1.0" encoding="UTF-8"?>
+    <Response>
+        <Speak>Welcome, you are participant two.</Speak>
+        <Conference>EngineeringSync</Conference>
+    </Response>
+    ```
+  </Tab>
+</Tabs>
+
+Both callers are placed in the same `EngineeringSync` room and can hear and speak to each other.
+
+<Tip>
+  Combine `<Conference>` with `<Record>` placed earlier in the XML to record the full session, including everything said before the caller entered the room.
+</Tip>

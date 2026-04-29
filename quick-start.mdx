@@ -1,0 +1,140 @@
+---
+title: "Quick Start: Make Your First Call in Minutes"
+description: "Sign up for Vobiz, buy a phone number, and configure your first SIP trunk or XML application. Follow this step-by-step guide to make your first call."
+---
+
+This guide walks you through the essential setup steps to get your Vobiz account ready to make and receive calls. By the end, you will have a phone number, a working SIP trunk or XML application, and a clear picture of where to go next.
+
+<Steps>
+
+<Step title="Sign up">
+
+Create your Vobiz account at the [registration page](https://console.vobiz.ai/app/register). Registration takes under two minutes — you only need an email address and a password.
+
+Once your account is created, Vobiz credits your account with ₹25 to explore the platform before adding funds.
+
+</Step>
+
+<Step title="Review the dashboard">
+
+After signing up you land on the dashboard. From here you can see your account balance, navigate to all sections of the console, and monitor recent activity.
+
+<Note>
+  Your **Auth ID** and **Auth Token** are visible in Account Settings. You will need both values to authenticate every API request.
+</Note>
+
+</Step>
+
+<Step title="Buy a phone number">
+
+Navigate to the **DID** section of the console. Filter numbers by region to find a number that matches your target geography, then purchase it.
+
+The number is immediately available for inbound and outbound routing once provisioned.
+
+</Step>
+
+<Step title="Set up SIP trunks">
+
+SIP trunks connect your infrastructure to the Vobiz carrier network. Configure outbound and inbound trunks separately.
+
+<Tabs>
+  <Tab title="Outbound trunk">
+    1. Go to **SIP Trunks → Outbound** in the console.
+    2. Create a new outbound trunk and give it a name.
+    3. Create credentials (username and password) for the trunk. These authenticate your SIP INVITE requests to the Vobiz network.
+
+    Your outbound trunk is now ready to send calls from your SIP infrastructure.
+  </Tab>
+  <Tab title="Inbound trunk">
+    1. Go to **SIP Trunks → Inbound** in the console.
+    2. Link your purchased phone number to the inbound trunk. Calls to that DID are forwarded to the trunk.
+    3. Optionally, configure a **SIP Origination URI** to route inbound calls directly to your own SIP server or hosted platform (LiveKit, VAPI, Retell AI, etc.).
+  </Tab>
+</Tabs>
+
+<Tip>
+  If you are connecting to VAPI, Retell AI, LiveKit, or ElevenLabs, point your inbound trunk's SIP URI at the platform's SIP endpoint. See the [Integrations](/integrations) section for platform-specific instructions.
+</Tip>
+
+</Step>
+
+<Step title="Connect platform integrations">
+
+Vobiz integrates with a wide range of AI voice and telephony platforms. Configure the integration that matches your stack:
+
+- [VAPI](/integrations/vapi-dashboard) — Managed AI voice with BYO SIP trunk
+- [Retell AI](/integrations/retellai-dashboard) — Elastic SIP or API registration
+- [ElevenLabs](/integrations/elevenlabs-dashboard) — Native SIP for conversational AI
+- [LiveKit](/integrations/livekit) — SIP Service → WebRTC room
+- [Pipecat](/integrations/pipecat) — WebSocket audio streaming
+- [View all integrations →](/integrations)
+
+</Step>
+
+<Step title="Create an XML application">
+
+If you want to control call flow programmatically without a managed platform, create a **Voice XML application** in the **Voice** section of the console.
+
+Configure the following URLs on your application:
+
+| URL field | Purpose |
+|---|---|
+| Answer URL | Vobiz fetches this URL when a call is answered. Return Voice XML to control the call. |
+| Fallback URL | Used if the Answer URL is unreachable. |
+| Hangup URL | Called when the call ends. |
+| Status URL | Receives status callback events (Ring, StartApp, Hangup). |
+
+After creating the application, assign your purchased phone number to it. Inbound calls to that number will execute your XML application logic.
+
+<Tip>
+  Use the [XML Builder](https://www.docs.vobiz.ai/xml-builder) to generate Voice XML quickly without writing it by hand.
+</Tip>
+
+</Step>
+
+<Step title="View transactions">
+
+Go to the **Transactions** section to see a full history of charges and credits on your account. Monitor balance consumption as you make calls during testing.
+
+</Step>
+
+<Step title="View voice call logs">
+
+The **Voice Call Logs** section shows records for all calls handled through XML Applications and the Voice REST API. Use this view to confirm calls are processing correctly and to inspect call metadata at a high level.
+
+</Step>
+
+<Step title="Manage recordings">
+
+If your Voice XML application includes a `<Record>` directive, your recordings appear in the **Recordings** section. You can listen to, download, or delete recordings from this view.
+
+</Step>
+
+<Step title="View SIP call logs">
+
+For calls made through SIP Trunks or SIP Endpoints, check **SIP Call Logs**. This section provides low-level SIP signaling details — response codes, trunk ID, hangup cause — essential for diagnosing connection issues.
+
+<Note>
+  If you see SIP 480 or 486 response codes, see [SIP codes 480 and 486](/faq#why-am-i-receiving-sip-response-codes-480-or-486) in the FAQ for an explanation.
+</Note>
+
+</Step>
+
+</Steps>
+
+## What to do next
+
+<CardGroup cols={2}>
+  <Card title="Core concepts" icon="book-open" href="/concepts/overview">
+    Understand SIP trunking, WebSocket streaming, callbacks, and how to choose between architectures.
+  </Card>
+  <Card title="Call detail records" icon="list" href="/cdr">
+    Query and export CDR data for billing reconciliation and call analytics.
+  </Card>
+  <Card title="Error handling" icon="triangle-alert" href="/errors">
+    Reference for HTTP status codes and common error scenarios.
+  </Card>
+  <Card title="Best practices" icon="shield-check" href="/best-practices">
+    Security, performance, and reliability recommendations for production.
+  </Card>
+</CardGroup>

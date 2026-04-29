@@ -1,0 +1,100 @@
+---
+title: "Connect Vobiz to Retell AI using the dashboard"
+description: "Integrate Vobiz SIP trunking with Retell AI using only the dashboard. Configure your trunk and phone number for outbound AI calls in minutes."
+sidebarTitle: "Retell AI (dashboard)"
+---
+
+This guide shows you how to connect your Vobiz phone number to Retell AI so your AI agent can make outbound calls with natural-sounding conversations. The setup is done entirely through the Retell dashboard—no code required.
+
+**Outbound call flow:**
+
+```text
+Your App → Retell AI Agent → Vobiz SIP → Phone Network → AI Conversation
+```
+
+## Prerequisites
+
+Before you start, make sure you have:
+
+- A Retell AI account — [sign up](https://dashboard.retellai.com)
+- A Vobiz account with active balance — [sign up](https://console.vobiz.ai/auth/signup)
+- A Retell AI agent already created — [create one](https://dashboard.retellai.com/agents)
+- A phone number purchased from Vobiz (for caller ID)
+
+## Step 1: Open the Phone Numbers section
+
+<Steps>
+  <Step title="Log in to Retell">
+    Go to the [Retell Dashboard](https://dashboard.retellai.com) and navigate to **Phone Numbers** in the sidebar.
+  </Step>
+  <Step title="Add a new number">
+    Click the **+** button to begin adding a phone number.
+  </Step>
+</Steps>
+
+## Step 2: Select SIP trunking
+
+When prompted to choose a number source, select **Connect to your number via SIP trunking**. This option lets you use your existing Vobiz number and SIP infrastructure instead of purchasing a number from Retell.
+
+## Step 3: Configure the SIP trunk
+
+Fill in the following fields with your Vobiz credentials. You can find these in the [Vobiz Console](https://console.vobiz.ai) under **SIP Trunk → Outbound Trunks → Trunks → Your Trunk → Authentication & Linking**.
+
+| Field | Value | Notes |
+|---|---|---|
+| Phone Number | Your Vobiz number | E.164 format, e.g. `+1234567890` |
+| Termination URI | Your Vobiz SIP domain | e.g. `abc123.sip.vobiz.ai` — do **not** include `sip:` |
+| SIP Trunk Username | Your Vobiz trunk username | Optional but recommended |
+| SIP Trunk Password | Your Vobiz trunk password | Optional but recommended |
+| Nickname | Friendly label | e.g. `Vobiz Main Line` |
+
+<Warning>
+Do not include the `sip:` prefix in the Termination URI field. Enter only the domain portion, for example `abc123.sip.vobiz.ai`. Including the prefix causes SIP routing failures.
+</Warning>
+
+Click **Save** to complete the configuration. Your Vobiz number is now ready to make outbound calls through Retell AI.
+
+## Step 4: Make a batch call
+
+<Steps>
+  <Step title="Select your number">
+    Click on the configured phone number in the Retell Phone Numbers list.
+  </Step>
+  <Step title="Create a batch call">
+    Select **Create a batch call** and fill in the campaign details:
+
+    | Field | Value |
+    |---|---|
+    | Batch Call Name | e.g. `Customer Outreach Q1` |
+    | From number | Your configured Vobiz number |
+    | Upload Recipients | CSV file with destination phone numbers |
+    | When to send | Send Now or Schedule |
+  </Step>
+  <Step title="Send or schedule">
+    Click **Send** or **Schedule**. Retell AI will dial each number in the CSV. When answered, your agent starts the conversation.
+  </Step>
+</Steps>
+
+<Note>
+For CSV file format requirements, see the [Retell batch calling documentation](https://docs.retellai.com).
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Phone number not found">
+    Verify the number format is E.164 (`+` followed by country code and number). Re-check that the number exists in the [Vobiz Console](https://console.vobiz.ai).
+  </Accordion>
+  <Accordion title="Call fails immediately">
+    Confirm your Vobiz username and password match what is shown in **Vobiz Console → Trunks**. Make sure the Termination URI uses your exact Vobiz domain without the `sip:` prefix. If using TCP, try switching to UDP transport in the trunk configuration.
+  </Accordion>
+  <Accordion title="Agent doesn't speak">
+    Make sure your Retell agent is published in [Retell Dashboard → Agents](https://dashboard.retellai.com/agents), has a voice configured, and the agent ID matches the one linked to your phone number.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+- Customize your agent's voice, personality, and system prompt in [Retell Dashboard → Agents](https://dashboard.retellai.com/agents).
+- View call transcripts and analytics in Retell Dashboard → Calls.
+- Monitor Vobiz balance and call records in the [Vobiz Console](https://console.vobiz.ai).

@@ -1,0 +1,306 @@
+---
+title: "Partner API: Call Detail Records (CDRs)"
+sidebarTitle: "CDRs"
+description: "GET call detail records for any customer. Filter by date, direction, status, or hangup cause across per-customer, single-call, and global CDR endpoints."
+---
+
+The CDR API gives you read access to call logs for all customers under your partner account. Use it for per-customer billing reconciliation, troubleshooting specific call incidents, and platform-wide traffic monitoring. Three endpoints cover different scopes:
+
+| Endpoint | Scope | Best for |
+|---|---|---|
+| `GET /accounts/{id}/cdrs` | Single customer | Per-customer billing, support tickets |
+| `GET /accounts/{id}/cdrs/{uuid}` | Single call | Troubleshooting a specific incident |
+| `GET /cdrs` | All customers | Platform-wide quality monitoring |
+
+---
+
+## Customer CDRs
+
+**`GET https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/cdrs`**
+
+Returns a paginated CDR log for one specific customer. All filter parameters are optional — omit all to retrieve the most recent calls in reverse chronological order.
+
+### Query parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number.
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="20">
+  Records per page. Maximum: `100`.
+</ParamField>
+
+<ParamField query="start_date" type="string">
+  Filter calls from this date. Format: `YYYY-MM-DD`.
+</ParamField>
+
+<ParamField query="end_date" type="string">
+  Filter calls up to this date. Format: `YYYY-MM-DD`.
+</ParamField>
+
+<ParamField query="call_direction" type="string">
+  `inbound` or `outbound`.
+</ParamField>
+
+<ParamField query="status" type="string">
+  `answered`, `no-answer`, `busy`, or `failed`.
+</ParamField>
+
+<ParamField query="from_number" type="string">
+  Filter by originating number.
+</ParamField>
+
+<ParamField query="to_number" type="string">
+  Filter by destination number.
+</ParamField>
+
+<ParamField query="hangup_cause" type="string">
+  SIP hangup cause code (e.g. `NORMAL_CLEARING`, `NO_ANSWER`, `CALL_REJECTED`).
+</ParamField>
+
+<ParamField query="min_duration" type="integer">
+  Minimum call duration in seconds.
+</ParamField>
+
+<ParamField query="max_duration" type="integer">
+  Maximum call duration in seconds.
+</ParamField>
+
+<ParamField query="search" type="string">
+  Free-text search across number fields.
+</ParamField>
+
+<ParamField query="context" type="string">
+  Call context type. Use `sip-trunking` for voice calls.
+</ParamField>
+
+<CodeGroup>
+
+```bash Recent CDRs
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/cdrs?page=1&per_page=20" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```bash Billing cycle — March 2026
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/cdrs?start_date=2026-03-01&end_date=2026-03-31&per_page=100" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```bash Failed calls by hangup cause
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/cdrs?status=failed&hangup_cause=NO_ANSWER&start_date=2026-03-20" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```python Python
+import requests
+
+BASE = "https://api.vobiz.ai/api/v1/partner"
+HEADERS = {
+    "X-Auth-ID": "{your_partner_id}",
+    "X-Auth-Token": "{your_auth_token}",
+    "Accept": "application/json",
+}
+
+customer_auth_id = "MA_48149cf4"
+
+response = requests.get(
+    f"{BASE}/accounts/{customer_auth_id}/cdrs",
+    headers=HEADERS,
+    params={
+        "start_date": "2026-03-01",
+        "end_date": "2026-03-31",
+        "per_page": 100,
+    },
+)
+
+data = response.json()
+total_cost = sum(call["cost"] for call in data["data"])
+print(f"Total calls: {data['meta']['total']}, Total cost: {total_cost}")
+```
+
+</CodeGroup>
+
+```json
+{
+  "data": [
+    {
+      "call_uuid": "abc123-def456-ghi789",
+      "from_number": "+919876543210",
+      "to_number": "+911234567890",
+      "direction": "outbound",
+      "status": "answered",
+      "duration_seconds": 185,
+      "hangup_cause": "NORMAL_CLEARING",
+      "cost": 1.39,
+      "currency": "INR",
+      "start_time": "2026-03-25T10:30:00Z",
+      "answer_time": "2026-03-25T10:30:08Z",
+      "end_time": "2026-03-25T10:33:05Z",
+      "trunk_id": "trunk_abc",
+      "context": "sip-trunking"
+    }
+  ],
+  "meta": {
+    "total": 1284,
+    "page": 1,
+    "per_page": 20
+  }
+}
+```
+
+---
+
+## Get a specific CDR
+
+**`GET https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/cdrs/{call_uuid}`**
+
+Returns complete detail for a single call. Use this when a customer reports an issue with a specific call — pass the `call_uuid` from their system or from a previous CDR list query.
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/cdrs/abc123-def456-ghi789" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```python Python
+import requests
+
+customer_auth_id = "MA_48149cf4"
+call_uuid = "abc123-def456-ghi789"
+
+response = requests.get(
+    f"https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/cdrs/{call_uuid}",
+    headers={
+        "X-Auth-ID": "{your_partner_id}",
+        "X-Auth-Token": "{your_auth_token}",
+        "Accept": "application/json",
+    },
+)
+
+cdr = response.json()
+print(f"Status: {cdr['status']}, Hangup: {cdr['hangup_cause']}, SIP: {cdr['sip_response_code']}")
+```
+
+</CodeGroup>
+
+```json
+{
+  "call_uuid": "abc123-def456-ghi789",
+  "from_number": "+919876543210",
+  "to_number": "+911234567890",
+  "direction": "outbound",
+  "status": "answered",
+  "duration_seconds": 185,
+  "ring_duration_seconds": 8,
+  "hangup_cause": "NORMAL_CLEARING",
+  "hangup_initiator": "caller",
+  "cost": 1.39,
+  "currency": "INR",
+  "start_time": "2026-03-25T10:30:00Z",
+  "answer_time": "2026-03-25T10:30:08Z",
+  "end_time": "2026-03-25T10:33:05Z",
+  "trunk_id": "trunk_abc",
+  "trunk_name": "Vobiz India Trunk",
+  "context": "sip-trunking",
+  "sip_response_code": 200,
+  "caller_id": "+919876543210",
+  "account_auth_id": "MA_48149cf4"
+}
+```
+
+---
+
+## All CDRs (global)
+
+**`GET https://api.vobiz.ai/api/v1/partner/cdrs`**
+
+Returns a global CDR log across all customer accounts in a single paginated response. Supports all the same filter parameters as the per-customer endpoint. Use for platform-wide traffic monitoring and identifying customers with unusual call patterns.
+
+<CodeGroup>
+
+```bash All customer CDRs
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/cdrs?page=1&per_page=50" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```bash All failed calls today
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/cdrs?status=failed&start_date=2026-03-25&per_page=100" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+</CodeGroup>
+
+---
+
+## CDR response fields
+
+<ResponseField name="call_uuid" type="string">
+  Unique identifier for this call. Use to retrieve the full CDR via the single-call endpoint.
+</ResponseField>
+
+<ResponseField name="from_number" type="string">
+  Originating caller number in E.164 format.
+</ResponseField>
+
+<ResponseField name="to_number" type="string">
+  Dialed destination number in E.164 format.
+</ResponseField>
+
+<ResponseField name="direction" type="string">
+  `inbound` (call to your customer) or `outbound` (call from your customer).
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `answered`, `no-answer`, `busy`, or `failed`.
+</ResponseField>
+
+<ResponseField name="duration_seconds" type="integer">
+  Actual connected call duration in seconds. `0` if the call was not answered.
+</ResponseField>
+
+<ResponseField name="hangup_cause" type="string">
+  SIP hangup reason code (e.g. `NORMAL_CLEARING`, `NO_ANSWER`, `CALL_REJECTED`).
+</ResponseField>
+
+<ResponseField name="cost" type="number">
+  Charge for this call in the account currency.
+</ResponseField>
+
+<ResponseField name="start_time" type="string">
+  When the call attempt began (ISO 8601, UTC).
+</ResponseField>
+
+<ResponseField name="answer_time" type="string">
+  When the call was answered. `null` if not answered.
+</ResponseField>
+
+<ResponseField name="end_time" type="string">
+  When the call ended (ISO 8601, UTC).
+</ResponseField>
+
+<ResponseField name="trunk_id" type="string">
+  SIP trunk used to route this call.
+</ResponseField>
+
+<ResponseField name="context" type="string">
+  Call context type. `sip-trunking` for voice calls.
+</ResponseField>

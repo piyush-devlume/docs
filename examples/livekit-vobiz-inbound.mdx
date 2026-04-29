@@ -1,0 +1,93 @@
+---
+title: "LiveKit inbound calling with Vobiz SIP trunking"
+description: "Python example for AI-powered inbound calling with LiveKit and Vobiz SIP. Includes full dispatch rule setup, agent entry point, and inbound handler code."
+sidebarTitle: "LiveKit inbound"
+---
+
+This example shows how to accept inbound PSTN calls on a Vobiz phone number and route them automatically to a LiveKit AI agent. A long-running Python daemon polls LiveKit for new rooms and handles each call independently, so multiple simultaneous callers are served without dropping any traffic.
+
+<Info>
+The full source code is available at [github.com/vobiz-ai/Livekit-vobiz-inbound](https://github.com/vobiz-ai/Livekit-vobiz-inbound).
+</Info>
+
+```bash
+git clone https://github.com/vobiz-ai/Livekit-vobiz-inbound.git
+cd Livekit-vobiz-inbound
+```
+
+## How it works
+
+Inbound calling relies on LiveKit **dispatch rules** to map incoming SIP traffic to dynamically created rooms:
+
+1. **SIP proxy:** Your Vobiz phone number is configured with an inbound destination pointing to your LiveKit project's SIP URI (e.g., `your-project.sip.livekit.cloud`).
+2. **Dispatch rule:** A dispatch rule on the LiveKit side filters traffic by your Vobiz trunk ID and automatically creates a new room for each call.
+3. **Agent daemon:** Your `agent_inbound.py` process runs continuously. The moment a new untended room appears, the worker injects an `AgentSession` and starts the conversation.
+
+<Note>
+The dispatch rule `pin` field is optional. Omit it for open routing, or set it to require callers to enter a PIN before being connected to an agent.
+</Note>
+
+## Prerequisites
+
+- A Vobiz account with a configured inbound SIP trunk. The trunk's **inbound destination** must be set to your LiveKit SIP URI (without the `sip:` prefix).
+- A LiveKit Cloud project with a SIP inbound trunk created under **Telephony → Trunks**.
+- Python 3.10 or later.
+
+## Implementation
+
+The `setup_inbound.py` script creates a persistent dispatch rule. Run it once during initial setup; it survives server restarts.
+
+```python
+from livekit import api
+
+async def deploy_inbound_dispatch_rule():
+    """Create a dispatch rule that routes Vobiz PSTN calls to new LiveKit rooms."""
+    livekit_api = api.LiveKitAPI()
+
+    await livekit_api.sip.create_sip_dispatch_rule(
+        api.CreateSIPDispatchRuleRequest(
+            name="Vobiz inbound routing",
+            rule=api.SIPDispatchRule(
+                dispatch_rule_direct=api.SIPDispatchRuleDirect(
+                    room_prefix="inbound_call_",
+                    pin="1234"  # Optional: require callers to enter a PIN
+                )
+            ),
+            trunk_ids=["ST_xxxxxxxxxxx"]  # Only route calls from this Vobiz trunk
+        )
+    )
+```
+
+<Warning>
+Replace `ST_xxxxxxxxxxx` with the SIP trunk ID assigned when you created the inbound trunk in LiveKit (**Telephony → Trunks**). This value must match exactly or LiveKit will route calls elsewhere.
+</Warning>
+
+## Call flow diagram
+
+```text
+Caller dials Vobiz number
+    │
+    └─► Vobiz SIP trunk ──► LiveKit SIP URI (your-project.sip.livekit.cloud)
+            │
+            └─► Dispatch rule matches trunk_ids["ST_xxxxxxxxxxx"]
+                    │
+                    └─► New room created: "inbound_call_<uuid>"
+                            │
+                            └─► agent_inbound.py detects room
+                                    │
+                                    └─► AgentSession injected ──► AI conversation begins
+```
+
+## Configuration reference
+
+| Parameter | Description | Example |
+|---|---|---|
+| `trunk_ids` | LiveKit inbound trunk ID(s) accepting Vobiz traffic | `["ST_abc123"]` |
+| `room_prefix` | Prefix for dynamically created room names | `inbound_call_` |
+| `pin` | Optional PIN callers must enter before connection | `"1234"` |
+
+## Next steps
+
+- See [LiveKit outbound calling](/examples/livekit-vobiz-outbound) to make calls rather than receive them.
+- See the [LiveKit integration guide](/integrations/livekit) for full trunk setup, SIP URI configuration, and inbound routing in the Vobiz Console.
+- For combining both inbound and outbound with call transfer, see the [all-features example repository](https://github.com/vobiz-ai/Livekit-Vobiz-All-feature-Example).

@@ -1,0 +1,210 @@
+---
+title: "Answering Machine Detection for Outbound Calls"
+description: "Detect answering machines on outbound calls in synchronous or asynchronous mode. Configure sensitivity thresholds and handle detection results via callbacks."
+---
+
+Machine detection lets you identify when an answering machine — rather than a live person — picks up your outbound call. Configure Vobiz to either continue the call or hang up automatically when a machine is detected, and optionally receive asynchronous callbacks with detection results.
+
+<Note>
+  Machine detection is not a separate endpoint. You enable it by including machine detection parameters in the [Make a Call](/call/make-call) request body. This page documents those parameters and the callback format.
+</Note>
+
+## How it works
+
+<Steps>
+  <Step title="Initiate the call with machine_detection">
+    Add the `machine_detection` parameter to your [Make a Call](/call/make-call) request. Set it to `true` to continue the call when a machine is detected, or `hangup` to terminate automatically.
+  </Step>
+  <Step title="Vobiz analyzes the audio">
+    After the call is answered, Vobiz analyzes the audio for the duration specified in `machine_detection_time` to determine whether a human or a machine answered.
+  </Step>
+  <Step title="Vobiz acts on the result">
+    For synchronous detection, Vobiz either continues or hangs up based on your `machine_detection` setting. For asynchronous detection, Vobiz posts the result to your `machine_detection_url`.
+  </Step>
+</Steps>
+
+## Synchronous detection parameters
+
+Set these parameters in your Make a Call request to enable and tune machine detection.
+
+<ParamField body="machine_detection" type="string">
+  Enable machine detection. Accepted values:
+
+  - `true` — Continue the call when a machine is detected.
+  - `hangup` — Automatically hang up when a machine is detected.
+</ParamField>
+
+<ParamField body="machine_detection_time" type="integer" default="5000">
+  Duration in milliseconds to analyze audio for detection. Allowed range: `2000`–`10000`.
+</ParamField>
+
+<ParamField body="machine_detection_maximum_speech_length" type="integer" default="5000">
+  Maximum speech duration in milliseconds analyzed during detection. Allowed range: `1000`–`6000`.
+</ParamField>
+
+<ParamField body="machine_detection_initial_silence" type="integer" default="4500">
+  Maximum silence in milliseconds after the call is answered before detection concludes. Allowed range: `2000`–`10000`.
+</ParamField>
+
+<ParamField body="machine_detection_maximum_words" type="integer" default="3">
+  Maximum number of sentences analyzed during detection. Allowed range: `2`–`10`.
+</ParamField>
+
+<ParamField body="machine_detection_initial_greeting" type="integer" default="1500">
+  Maximum greeting length in milliseconds. Allowed range: `1000`–`5000`.
+</ParamField>
+
+## Asynchronous detection parameters
+
+Asynchronous detection runs in the background while your call flow proceeds normally. Vobiz posts results to your callback URL when detection completes.
+
+<ParamField body="machine_detection_url" type="string">
+  URL invoked when machine detection completes. Vobiz posts detection results to this URL as form parameters.
+</ParamField>
+
+<ParamField body="machine_detection_method" type="string" default="POST">
+  HTTP method used to invoke `machine_detection_url`. Accepted values: `GET`, `POST`.
+</ParamField>
+
+<Tip>
+  Asynchronous detection lets your application handle the call immediately while detection runs in the background, providing a better caller experience compared to waiting for synchronous analysis.
+</Tip>
+
+## Callback parameters
+
+When machine detection completes, Vobiz sends the following parameters to your `machine_detection_url`.
+
+<ResponseField name="From" type="string">
+  The from number used to initiate the call.
+</ResponseField>
+
+<ResponseField name="Machine" type="boolean">
+  `true` if a machine was detected; `false` if a human answered.
+</ResponseField>
+
+<ResponseField name="To" type="string">
+  The destination number called.
+</ResponseField>
+
+<ResponseField name="RequestUUID" type="string">
+  Unique identifier for the call request.
+</ResponseField>
+
+<ResponseField name="ALegRequestUUID" type="string">
+  Identifies the first leg of the call when multiple legs exist.
+</ResponseField>
+
+<ResponseField name="CallUUID" type="string">
+  Unique identifier for the call.
+</ResponseField>
+
+<ResponseField name="IfMachine" type="string">
+  Action configured for machine detection. Returns `"continue"` or `"hangup"` depending on the `machine_detection` parameter set when the call was initiated.
+</ResponseField>
+
+<ResponseField name="Direction" type="string">
+  Direction of the call. Always `"outbound"` — machine detection is only supported on outbound calls.
+</ResponseField>
+
+<ResponseField name="ALegUUID" type="string">
+  Unique identifier for the A-leg of the call.
+</ResponseField>
+
+<ResponseField name="Event" type="string">
+  Event that triggered this notification. Always `"MachineDetection"`.
+</ResponseField>
+
+<ResponseField name="CallStatus" type="string">
+  Status of the call at the time of detection. Typically `"in-progress"`.
+</ResponseField>
+
+## Example callback payload
+
+```json
+{
+  "From": "+12025550000",
+  "Machine": true,
+  "To": "+12025551111",
+  "RequestUUID": "9834029e-58b6-11e1-b8b7-a5bd0e4e126f",
+  "ALegRequestUUID": "9834029e-58b6-11e1-b8b7-a5bd0e4e126f",
+  "CallUUID": "97ceeb52-58b6-11e1-86da-77300b68f8bb",
+  "IfMachine": "continue",
+  "Direction": "outbound",
+  "ALegUUID": "97ceeb52-58b6-11e1-86da-77300b68f8bb",
+  "Event": "MachineDetection",
+  "CallStatus": "in-progress"
+}
+```
+
+## Code example
+
+The following example initiates an outbound call with asynchronous machine detection enabled.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "14155551234",
+    "to": "14155555678",
+    "answer_url": "https://example.com/answer",
+    "machine_detection": "hangup",
+    "machine_detection_time": 5000,
+    "machine_detection_url": "https://example.com/machine-detection",
+    "machine_detection_method": "POST"
+  }'
+```
+
+```python Python
+import requests
+
+url = "https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+payload = {
+    "from": "14155551234",
+    "to": "14155555678",
+    "answer_url": "https://example.com/answer",
+    "machine_detection": "hangup",
+    "machine_detection_time": 5000,
+    "machine_detection_url": "https://example.com/machine-detection",
+    "machine_detection_method": "POST"
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const response = await axios.post(
+  "https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/",
+  {
+    from: "14155551234",
+    to: "14155555678",
+    answer_url: "https://example.com/answer",
+    machine_detection: "hangup",
+    machine_detection_time: 5000,
+    machine_detection_url: "https://example.com/machine-detection",
+    machine_detection_method: "POST"
+  },
+  {
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json"
+    }
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>

@@ -1,0 +1,239 @@
+---
+title: "Create a sub-account under your Vobiz account"
+description: "Provision a sub-account with isolated auth credentials, permissions, and rate limits — ideal for multi-tenant SaaS, resellers, and department billing."
+sidebarTitle: "Create sub-account"
+---
+
+Use this endpoint to create a new sub-account under your master account. Each sub-account receives its own unique `auth_id` and `auth_token` for independent API access. Sub-accounts are isolated environments suitable for multi-tenant SaaS applications, departmental resource separation, or reseller models where each customer needs dedicated credentials.
+
+**POST** `https://api.vobiz.ai/api/v1/accounts/{auth_id}/sub-accounts/`
+
+<Warning>
+  The `auth_token` for the new sub-account is returned only once in the creation response. Store it securely — you cannot retrieve it again. If lost, you must regenerate credentials.
+</Warning>
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your master account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+## Body parameters
+
+<ParamField body="name" type="string" required>
+  A human-readable name for the sub-account.
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Email address associated with the sub-account.
+</ParamField>
+
+<ParamField body="rate_limit" type="integer" required>
+  API rate limit for this sub-account (requests per time period).
+</ParamField>
+
+<ParamField body="permissions" type="object" required>
+  Permissions object controlling what the sub-account can access. Contains boolean fields:
+  - `calls` — whether the sub-account can make and receive calls
+  - `cdr` — whether the sub-account can access Call Detail Records
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Password for sub-account authentication.
+</ParamField>
+
+<ParamField body="phone" type="string">
+  Phone number associated with the sub-account.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Description of the sub-account purpose or usage.
+</ParamField>
+
+<ParamField body="enabled" type="boolean">
+  Whether the sub-account is active on creation. Defaults to `true`.
+</ParamField>
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST 'https://api.vobiz.ai/api/v1/accounts/{auth_id}/sub-accounts/' \
+  -H 'X-Auth-ID: {auth_id}' \
+  -H 'X-Auth-Token: {auth_token}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "Support Team",
+    "email": "support@example.com",
+    "phone": "+1234567890",
+    "description": "Support-facing voice workload",
+    "rate_limit": 500,
+    "permissions": {
+      "calls": true,
+      "cdr": true
+    },
+    "password": "S0pport123!",
+    "enabled": true
+  }'
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+url = f"https://api.vobiz.ai/api/v1/accounts/{auth_id}/sub-accounts/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+payload = {
+    "name": "Support Team",
+    "email": "support@example.com",
+    "phone": "+1234567890",
+    "description": "Support-facing voice workload",
+    "rate_limit": 500,
+    "permissions": {"calls": True, "cdr": True},
+    "password": "S0pport123!",
+    "enabled": True
+}
+
+response = requests.post(url, headers=headers, json=payload)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const response = await axios.post(
+  `https://api.vobiz.ai/api/v1/accounts/${authId}/sub-accounts/`,
+  {
+    name: "Support Team",
+    email: "support@example.com",
+    phone: "+1234567890",
+    description: "Support-facing voice workload",
+    rate_limit: 500,
+    permissions: { calls: true, cdr: true },
+    password: "S0pport123!",
+    enabled: true,
+  },
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json",
+    },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response fields
+
+<ResponseField name="message" type="string">
+  Confirmation message (e.g., `Sub-account created successfully`).
+</ResponseField>
+
+<ResponseField name="sub_account" type="object">
+  The created sub-account object.
+
+  <Expandable title="sub_account fields">
+    <ResponseField name="id" type="string">
+      Unique identifier for the sub-account (e.g., `SA_67401KW8`).
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Name of the sub-account.
+    </ResponseField>
+    <ResponseField name="email" type="string">
+      Email address for the sub-account.
+    </ResponseField>
+    <ResponseField name="parent_auth_id" type="string">
+      Auth ID of the parent master account.
+    </ResponseField>
+    <ResponseField name="auth_id" type="string">
+      Authentication ID for the sub-account.
+    </ResponseField>
+    <ResponseField name="auth_token" type="string">
+      Authentication token. Returned only once — store it securely.
+    </ResponseField>
+    <ResponseField name="permissions" type="object">
+      The permissions granted to this sub-account.
+    </ResponseField>
+    <ResponseField name="rate_limit" type="integer">
+      API rate limit for this sub-account.
+    </ResponseField>
+    <ResponseField name="is_active" type="boolean">
+      Whether the sub-account is currently active.
+    </ResponseField>
+    <ResponseField name="created_at" type="string">
+      ISO 8601 timestamp of creation.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="auth_credentials" type="object">
+  The `auth_id` and `auth_token` pair for API authentication. Save these immediately.
+</ResponseField>
+
+<ResponseField name="tokens" type="object">
+  JWT access and refresh tokens for immediate API access.
+
+  <Expandable title="tokens fields">
+    <ResponseField name="access_token" type="string">
+      JWT access token.
+    </ResponseField>
+    <ResponseField name="refresh_token" type="string">
+      JWT refresh token.
+    </ResponseField>
+    <ResponseField name="token_type" type="string">
+      Token type (e.g., `bearer`).
+    </ResponseField>
+    <ResponseField name="expires_in" type="integer">
+      Access token lifetime in seconds.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example response
+
+```json 201 Created
+{
+  "message": "Sub-account created successfully",
+  "sub_account": {
+    "name": "Support Team",
+    "email": "support@example.com",
+    "phone": "+1234567890",
+    "description": "Support-facing voice workload",
+    "permissions": {
+      "calls": true,
+      "cdr": true
+    },
+    "rate_limit": 500,
+    "id": "SA_67401KW8",
+    "parent_auth_id": "MA_XXXXXX",
+    "auth_id": "inG9oUky5uFjdUECaQNzeyVYD6ommaJd",
+    "auth_token": "your_auth_token_here",
+    "email_verified": true,
+    "enabled": true,
+    "is_active": true,
+    "created_at": "2025-10-22T03:57:35.997500Z",
+    "updated_at": "2025-10-22T03:57:35.997500Z",
+    "last_used": null
+  },
+  "auth_credentials": {
+    "auth_id": "inG9oUky5uFjdUECaQNzeyVYD6ommaJd",
+    "auth_token": "your_auth_token_here"
+  },
+  "tokens": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "bearer",
+    "expires_in": 1800
+  }
+}
+```

@@ -1,0 +1,123 @@
+---
+title: "The Vobiz Conference object reference"
+description: "Field reference for the Conference object: runtime, member count, recording status, and per-member state including mute, deaf, and call details."
+sidebarTitle: "Conference object"
+---
+
+The Conference object represents the real-time state of an ongoing conference call. It is returned by the Retrieve Conference endpoint and contains the conference name, total runtime, number of active participants, and a detailed array of member objects describing each participant's current state.
+
+## Top-level attributes
+
+<ResponseField name="conference_name" type="string">
+  Name used to identify the conference. This is the unique identifier for the conference room.
+</ResponseField>
+
+<ResponseField name="conference_run_time" type="string">
+  Time in seconds since the conference was initiated.
+</ResponseField>
+
+<ResponseField name="conference_member_count" type="string">
+  Number of members currently active in the conference. Updated in real-time as members join or leave.
+</ResponseField>
+
+<ResponseField name="members" type="array">
+  Array of member objects describing each participant currently in the conference.
+</ResponseField>
+
+## Member object attributes
+
+Each object in the `members` array describes one active participant.
+
+<ResponseField name="member_id" type="string">
+  Unique ID of the member within this conference. Use this value to target the member in operations like mute, deaf, kick, or hang up.
+</ResponseField>
+
+<ResponseField name="muted" type="boolean">
+  `true` if the member is currently muted — their audio is not transmitted to other participants. `false` if they can speak freely.
+</ResponseField>
+
+<ResponseField name="deaf" type="boolean">
+  `true` if the member cannot hear conference audio. `false` if they can hear other participants.
+</ResponseField>
+
+<ResponseField name="from" type="string">
+  Source of the call — either a PSTN number or SIP endpoint.
+</ResponseField>
+
+<ResponseField name="to" type="string">
+  Conference bridge number — either a Vobiz number or an application URL.
+</ResponseField>
+
+<ResponseField name="caller_name" type="string">
+  Name of the caller. Only populated for calls made from a SIP endpoint. Empty string if not available.
+</ResponseField>
+
+<ResponseField name="direction" type="string">
+  Direction of the call. Values: `inbound` (caller dialed into the conference), `outbound` (conference system called the participant).
+</ResponseField>
+
+<ResponseField name="call_uuid" type="string">
+  Unique identifier of the call. Use this to reference the call in other API operations or to correlate with CDR records.
+</ResponseField>
+
+<ResponseField name="join_time" type="string">
+  Time in seconds since this member joined the conference.
+</ResponseField>
+
+## Member state combinations
+
+| `muted` | `deaf` | Effect |
+|---------|--------|--------|
+| `false` | `false` | Full two-way audio — member can speak and hear |
+| `true` | `false` | Member cannot be heard but can hear others |
+| `false` | `true` | Member can be heard but cannot hear others |
+| `true` | `true` | Member is fully isolated from the conference |
+
+## Example object
+
+```json
+{
+  "conference_name": "Team Meeting",
+  "conference_run_time": "1200",
+  "conference_member_count": "3",
+  "members": [
+    {
+      "muted": false,
+      "member_id": "45",
+      "deaf": false,
+      "from": "14155551234",
+      "to": "14155559999",
+      "caller_name": "Alice Johnson",
+      "direction": "inbound",
+      "call_uuid": "a1b2c3d4-1234-5678-90ab-cdef12345678",
+      "join_time": "1200"
+    },
+    {
+      "muted": true,
+      "member_id": "46",
+      "deaf": false,
+      "from": "14155555678",
+      "to": "14155559999",
+      "caller_name": "",
+      "direction": "outbound",
+      "call_uuid": "b2c3d4e5-2345-6789-01bc-def123456789",
+      "join_time": "900"
+    },
+    {
+      "muted": false,
+      "member_id": "47",
+      "deaf": false,
+      "from": "14155556789",
+      "to": "14155559999",
+      "caller_name": "Bob Smith",
+      "direction": "inbound",
+      "call_uuid": "c3d4e5f6-3456-7890-12cd-ef1234567890",
+      "join_time": "300"
+    }
+  ]
+}
+```
+
+<Note>
+  Member IDs are unique within a conference session but are not globally persistent. Always fetch current member IDs using the Retrieve Conference endpoint before performing member operations.
+</Note>

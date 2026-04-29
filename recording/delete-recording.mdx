@@ -1,0 +1,92 @@
+---
+title: "Permanently delete a recording from your account"
+description: "Remove a specific recording file and all its metadata from Vobiz using the recording ID. This operation is immediate and cannot be undone."
+sidebarTitle: "Delete recording"
+---
+
+Use this endpoint to permanently delete a single recording from your account. Once deleted, the audio file is removed from storage, the `recording_url` is no longer accessible, and all associated metadata is gone. This action cannot be reversed.
+
+**DELETE** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Recording/{recording_id}/`
+
+<Warning>
+  Deletion is permanent. Download and archive the recording file before deleting if you need it for compliance, legal, or audit purposes.
+</Warning>
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+<ParamField path="recording_id" type="string" required>
+  The unique identifier of the recording to delete.
+</ParamField>
+
+No request body is required.
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Recording/d7801b2e-e76d-4dd8-be9c-9e015a7267b8/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+recording_id = "d7801b2e-e76d-4dd8-be9c-9e015a7267b8"
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Recording/{recording_id}/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.delete(url, headers=headers)
+# Successful deletion returns 204 No Content
+print(response.status_code)
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const recordingId = "d7801b2e-e76d-4dd8-be9c-9e015a7267b8";
+
+const response = await axios.delete(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Recording/${recordingId}/`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    },
+  }
+);
+
+// Successful deletion returns HTTP 204
+console.log(response.status);
+```
+
+</CodeGroup>
+
+## Response
+
+A successful deletion returns **HTTP 204 No Content** with no response body.
+
+```json 404 Not Found
+{
+  "api_id": "correlation-id-uuid",
+  "error": "Recording not found"
+}
+```
+
+<Note>
+  A 404 response when you are confident the recording ID is correct typically means the recording was already deleted by another process or user.
+</Note>
+
+<Tip>
+  To delete many recordings at once, use the bulk delete endpoint instead of making individual delete requests for each recording.
+</Tip>

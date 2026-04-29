@@ -1,0 +1,150 @@
+---
+title: "List all applications in your Vobiz account"
+description: "Retrieve a paginated list of all voice and messaging applications configured in your account, with support for offset-based pagination."
+sidebarTitle: "List applications"
+---
+
+Use this endpoint to retrieve all applications created under your Vobiz account. Results include the full configuration of each application and support offset-based pagination. Use `limit` and `offset` to navigate through large sets of applications.
+
+**GET** `https://api.vobiz.ai/api/v1/Account/{authID}/Application/`
+
+## Path parameters
+
+<ParamField path="authID" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+## Query parameters
+
+<ParamField query="limit" type="integer">
+  Number of results to return per page. Maximum: `100`. Default: `20`.
+</ParamField>
+
+<ParamField query="offset" type="integer">
+  Number of results to skip for pagination. Default: `0`.
+</ParamField>
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET "https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Application/?limit=20&offset=0" \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Application/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+params = {"limit": 20, "offset": 0}
+
+response = requests.get(url, headers=headers, params=params)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const response = await axios.get(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Application/`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    },
+    params: { limit: 20, offset: 0 },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response fields
+
+<ResponseField name="api_id" type="string">
+  Unique identifier for this API request.
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata.
+
+  <Expandable title="meta fields">
+    <ResponseField name="limit" type="integer">
+      Number of results per page.
+    </ResponseField>
+    <ResponseField name="offset" type="integer">
+      Number of results skipped.
+    </ResponseField>
+    <ResponseField name="total_count" type="integer">
+      Total number of applications in your account.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="objects" type="array">
+  Array of application objects. Each object contains the full application configuration. See the [Application object](/applications/application-object) for a complete field reference.
+</ResponseField>
+
+## Example response
+
+```json 200 OK
+{
+  "api_id": "550e8400-e29b-41d4-a716-446655440000",
+  "meta": {
+    "limit": 20,
+    "offset": 0,
+    "total_count": 45
+  },
+  "objects": [
+    {
+      "app_id": "12345678",
+      "app_name": "My Voice Application",
+      "application_type": "voice",
+      "enabled": true,
+      "default_app": false,
+      "answer_url": "https://example.com/answer",
+      "answer_method": "POST",
+      "hangup_url": "https://example.com/hangup",
+      "hangup_method": "POST",
+      "fallback_answer_url": "https://example.com/fallback",
+      "fallback_method": "POST",
+      "message_url": "https://example.com/message",
+      "message_method": "POST",
+      "log_incoming_message": true,
+      "public_uri": false,
+      "sip_uri": "sip:12345678@vobiz.ai",
+      "default_number_app": false,
+      "default_endpoint_app": false,
+      "sub_account": null,
+      "resource_uri": "/v1/Account/MA_XXXXXX/Application/12345678/",
+      "created_at": "2025-10-28T10:30:00Z",
+      "updated_at": "2025-10-28T10:30:00Z"
+    },
+    {
+      "app_id": "87654321",
+      "app_name": "Customer Service App",
+      "application_type": "voice",
+      "enabled": true,
+      "default_app": true,
+      "answer_url": "https://example.com/cs/answer",
+      "answer_method": "GET",
+      "default_number_app": true,
+      "default_endpoint_app": false,
+      "sub_account": null,
+      "resource_uri": "/v1/Account/MA_XXXXXX/Application/87654321/",
+      "created_at": "2025-10-27T15:20:00Z",
+      "updated_at": "2025-10-28T08:15:00Z"
+    }
+  ]
+}
+```

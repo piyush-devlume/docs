@@ -1,0 +1,193 @@
+---
+title: "Integrate Vobiz WebSocket streaming with Pipecat"
+description: "Connect Vobiz WebSocket audio streaming to a Pipecat AI voice agent. Covers installation, environment setup, outbound calling, and inbound call configuration."
+sidebarTitle: "Pipecat"
+---
+
+This integration connects Vobiz telephony to Pipecat's voice agent framework. When a call is placed or received, Vobiz streams raw audio over a WebSocket to your Pipecat server. Pipecat handles the AI pipeline—VAD → STT → LLM → TTS—and streams synthesized speech back to the caller in real time. All conversations are automatically recorded.
+
+**Call flow:**
+
+```text
+curl POST → Vobiz API → call initiated → call answered
+    → Vobiz requests XML from your server
+    → server returns WebSocket URL
+    → audio streams to Pipecat bot (STT → LLM → TTS)
+    → AI conversation + recording
+```
+
+## Prerequisites
+
+- A Vobiz account with Auth ID and Auth Token — [sign up](https://console.vobiz.ai/auth/signup)
+- An OpenAI API key (for LLM, STT, and TTS) — [get one](https://platform.openai.com)
+- Python 3.10 or later
+- ngrok for local development — [download](https://ngrok.com)
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/vobiz-ai/Vobiz-X-Pipecat
+    cd Vobiz-X-Pipecat
+    ```
+  </Step>
+  <Step title="Install dependencies">
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+    This installs FastAPI, Pipecat, the OpenAI SDK, and all required packages.
+  </Step>
+  <Step title="Configure environment variables">
+    Create a `.env` file in the project root:
+
+    ```bash
+    OPENAI_API_KEY=sk-...
+    VOBIZ_AUTH_ID=MA_XXXXXXXX
+    VOBIZ_AUTH_TOKEN=your-token-here
+    PUBLIC_URL=https://your-ngrok-url.ngrok-free.app
+    ```
+
+    | Variable | Where to find it |
+    |---|---|
+    | `OPENAI_API_KEY` | OpenAI Platform → API Keys |
+    | `VOBIZ_AUTH_ID` | Vobiz Console → Account Settings |
+    | `VOBIZ_AUTH_TOKEN` | Vobiz Console → Account Settings |
+    | `PUBLIC_URL` | Your ngrok public URL (set after step 2 of Usage) |
+  </Step>
+</Steps>
+
+## Making outbound calls
+
+<Steps>
+  <Step title="Start the server">
+    ```bash
+    python server.py
+    ```
+
+    The server starts on `http://0.0.0.0:7860`.
+  </Step>
+  <Step title="Start ngrok">
+    In a second terminal, expose your local server:
+
+    ```bash
+    ngrok http 7860
+    ```
+
+    Copy the ngrok URL from the output (e.g. `https://abc123.ngrok-free.app`). Update `PUBLIC_URL` in your `.env` file and restart the server.
+  </Step>
+  <Step title="Dispatch a call">
+    Use the Vobiz API to initiate an outbound AI call:
+
+    ```bash
+    curl -X POST https://api.vobiz.ai/api/v1/Account/YOUR_AUTH_ID/Call/ \
+      -H "X-Auth-ID: YOUR_AUTH_ID" \
+      -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "from": "+918011223344",
+        "to": "+919148223344",
+        "answer_url": "https://your-ngrok-url.ngrok-free.app/answer",
+        "answer_method": "POST"
+      }'
+    ```
+
+    **What happens next:**
+    1. The destination phone rings.
+    2. When answered, Vobiz sends a POST to your `/answer` endpoint.
+    3. Your server returns XML containing the WebSocket URL.
+    4. Vobiz opens a WebSocket to your server.
+    5. Audio streams bidirectionally through the Pipecat pipeline.
+    6. The conversation is automatically recorded.
+  </Step>
+</Steps>
+
+## Receiving inbound calls
+
+Configure a Vobiz number to route incoming calls to your Pipecat server.
+
+<Steps>
+  <Step title="Create a Vobiz application">
+    Log in to the [Vobiz Console](https://console.vobiz.ai) and navigate to **Applications**. Click **Create New Application** and give it a name (e.g. `Pipecat Agent`).
+  </Step>
+  <Step title="Set the Answer URL">
+    Set **Answer URL** to your ngrok URL followed by `/answer` (e.g. `https://abc123.ngrok-free.app/answer`). Set the method to `POST`. You can set the same URL for Hangup or leave it blank.
+  </Step>
+  <Step title="Attach a phone number">
+    Go to **Phone Numbers**, select your Vobiz number, and assign it to the application you just created.
+  </Step>
+</Steps>
+
+Calls to your Vobiz number now route through your local Pipecat server.
+
+## Pipecat pipeline code
+
+The core pipeline wires Vobiz WebSocket audio through Pipecat's processing nodes:
+
+```python
+import asyncio
+from pipecat.pipeline.pipeline import Pipeline
+from pipecat.transports.network.websocket_server import WebsocketServerParams, WebsocketServerTransport
+from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.services.openai import OpenAILLMService
+
+async def main():
+    transport = WebsocketServerTransport(
+        params=WebsocketServerParams(
+            audio_out_enabled=True,
+            add_wav_header=False,
+            vad_enabled=True,
+            vad_analyzer=SileroVADAnalyzer(),
+            vad_audio_passthrough=True,
+        )
+    )
+
+    llm = OpenAILLMService(api_key="sk-...", model="gpt-4o-mini")
+
+    pipeline = Pipeline([
+        transport.input(),   # WebSocket input from Vobiz
+        stt_service,         # Deepgram STT
+        llm,                 # OpenAI LLM
+        tts_service,         # ElevenLabs or OpenAI TTS
+        transport.output(),  # WebSocket output back to Vobiz
+    ])
+```
+
+## Server endpoints reference
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/answer` | POST | Called by Vobiz when the call is answered. Returns XML with the WebSocket URL. |
+| `/ws` | WebSocket | Bidirectional audio stream endpoint. |
+| `/recording-finished` | POST | Called by Vobiz when recording stops. Logs recording details. |
+| `/recording-ready` | POST | Called when the recording file is ready. Auto-downloads the MP3. |
+
+## Customizing the bot
+
+Edit `bot.py` to change your agent's behavior.
+
+<CodeGroup>
+```python change personality
+messages = [
+    {
+        "role": "system",
+        "content": "You are a friendly customer service agent for Acme Corp. Be concise and helpful."
+    },
+]
+```
+
+```python change TTS voice
+tts = OpenAITTSService(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    voice="nova",  # Options: alloy, echo, fable, onyx, nova, shimmer
+)
+```
+</CodeGroup>
+
+## Next steps
+
+- Customize your agent's personality and voice in `bot.py`.
+- Deploy to production (AWS, GCP, or Heroku) instead of using ngrok.
+- See the [WebSockets guide](/integrations/websockets) for a Pipecat-free raw audio streaming alternative.
+- Explore the [full source repository](https://github.com/vobiz-ai/Vobiz-X-Pipecat) for additional configuration options.

@@ -1,0 +1,174 @@
+---
+title: "List all phone numbers on your account"
+description: "Retrieve a paginated list of phone numbers purchased and assigned to your Vobiz account, with optional sub-account inclusion for master accounts."
+sidebarTitle: "List phone numbers"
+---
+
+Use this endpoint to retrieve every phone number currently owned by your account. Results are paginated and include full number metadata such as capabilities, fees, and status. If you are using a master account (`MA_`), you can also pull in numbers belonging to all sub-accounts in a single request by setting `include_subaccounts=true`.
+
+**GET** `https://api.vobiz.ai/api/v1/account/{auth_id}/numbers`
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+## Query parameters
+
+<ParamField query="page" type="integer">
+  Page number for pagination. Default: `1`.
+</ParamField>
+
+<ParamField query="per_page" type="integer">
+  Number of items per page. Default: `25`. Maximum: `100`.
+</ParamField>
+
+<ParamField query="include_subaccounts" type="boolean">
+  Include numbers from sub-accounts. Defaults to `true` for master accounts (`MA_`). When `true`, all numbers from associated `SA_` accounts are included in the response.
+</ParamField>
+
+<Note>
+  Only numbers with a populated `auth_id` field are returned. Numbers sitting in inventory (unassigned) are not included.
+</Note>
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET "https://api.vobiz.ai/api/v1/account/{AUTH_ID}/numbers?page=1&per_page=25" \
+  -H "X-Auth-ID: {AUTH_ID}" \
+  -H "X-Auth-Token: {AUTH_TOKEN}"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+url = f"https://api.vobiz.ai/api/v1/account/{auth_id}/numbers"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+params = {"page": 1, "per_page": 25}
+
+response = requests.get(url, headers=headers, params=params)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const response = await axios.get(
+  `https://api.vobiz.ai/api/v1/account/${authId}/numbers`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    },
+    params: { page: 1, per_page: 25 },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response fields
+
+<ResponseField name="items" type="array">
+  Array of phone number objects owned by your account.
+
+  <Expandable title="Phone number object fields">
+    <ResponseField name="id" type="string">
+      UUID identifier for the phone number.
+    </ResponseField>
+    <ResponseField name="auth_id" type="string">
+      Auth ID of the account that owns this number.
+    </ResponseField>
+    <ResponseField name="e164" type="string">
+      Phone number in E.164 format (e.g., `+14155551234`).
+    </ResponseField>
+    <ResponseField name="country" type="string">
+      Country code (e.g., `US`, `IN`).
+    </ResponseField>
+    <ResponseField name="region" type="string">
+      State or region code (e.g., `CA`, `Karnataka`).
+    </ResponseField>
+    <ResponseField name="capabilities" type="object">
+      Boolean flags for each capability: `voice`, `sms`, `mms`, `fax`.
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Current status. Values: `active`, `pending_purchase`, `pending_release`, `released`, `blocked`.
+    </ResponseField>
+    <ResponseField name="setup_fee" type="number">
+      One-time setup fee charged when purchasing the number.
+    </ResponseField>
+    <ResponseField name="monthly_fee" type="number">
+      Monthly recurring fee for the number.
+    </ResponseField>
+    <ResponseField name="currency" type="string">
+      Currency code for fees (e.g., `USD`, `INR`).
+    </ResponseField>
+    <ResponseField name="trunk_group_id" type="string">
+      UUID of the assigned trunk group. Null if not assigned.
+    </ResponseField>
+    <ResponseField name="purchased_at" type="string">
+      ISO 8601 timestamp when the number was purchased.
+    </ResponseField>
+    <ResponseField name="created_at" type="string">
+      ISO 8601 timestamp when the number record was created.
+    </ResponseField>
+    <ResponseField name="updated_at" type="string">
+      ISO 8601 timestamp when the number record was last updated.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="page" type="integer">
+  Current page number.
+</ResponseField>
+
+<ResponseField name="per_page" type="integer">
+  Number of items per page.
+</ResponseField>
+
+<ResponseField name="total" type="integer">
+  Total count of purchased phone numbers matching the query.
+</ResponseField>
+
+## Example response
+
+```json 200 OK
+{
+  "items": [
+    {
+      "id": "90be0b9e-521d-41da-aebd-aba05006272f",
+      "auth_id": "MA_XXXXXX",
+      "e164": "+918071387149",
+      "country": "IN",
+      "region": "Karnataka",
+      "capabilities": {
+        "voice": false,
+        "sms": false,
+        "mms": false,
+        "fax": false
+      },
+      "status": "active",
+      "trunk_group_id": null,
+      "setup_fee": 100,
+      "monthly_fee": 500,
+      "currency": "INR",
+      "purchased_at": "2025-10-22T05:04:09.705084Z",
+      "created_at": "2025-10-21T12:03:44.837733Z",
+      "updated_at": "2025-10-22T05:04:09.705084Z"
+    }
+  ],
+  "page": 1,
+  "per_page": 25,
+  "total": 1
+}
+```

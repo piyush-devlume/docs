@@ -1,0 +1,179 @@
+---
+title: "Manage Conference Members"
+description: "Control conference participants: mute, deaf, kick, hang up, play audio, or speak text. Target a specific member, a subset, or all participants at once."
+sidebarTitle: "Conference members"
+---
+
+Use these endpoints to control individual participants in a conference. You can mute or unmute members, deafen or undeafen them, disconnect them by kicking or hanging up, and play audio or text-to-speech messages to them. Most operations support flexible member targeting so you can act on a single participant, a subset, or all participants at once.
+
+## Member targeting
+
+Most member operation URLs support three targeting modes:
+
+| Targeting | URL pattern | Effect |
+|-----------|-------------|--------|
+| Single member | `/Member/17/Mute/` | Only member `17` is affected |
+| Multiple members | `/Member/17,45,82/Mute/` | Members `17`, `45`, and `82` are affected |
+| All members | `/Member/all/Mute/` | Every member in the conference is affected |
+
+Retrieve `member_id` values from the [Retrieve Conference](/conference/retrieve-conference) endpoint.
+
+---
+
+## Hang up a member
+
+Immediately disconnect a member from the conference. The call is terminated completely.
+
+**DELETE** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Member/{member_id}/Hangup/`
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE "https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/My%20Conf%20Room/Member/17/Hangup/" \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+response = requests.delete(
+    f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/My%20Conf%20Room/Member/17/Hangup/",
+    headers={"X-Auth-ID": auth_id, "X-Auth-Token": "YOUR_AUTH_TOKEN"}
+)
+print(response.status_code)
+```
+
+```javascript Node.js
+const axios = require("axios");
+const authId = "YOUR_AUTH_ID";
+await axios.delete(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Conference/My%20Conf%20Room/Member/17/Hangup/`,
+  { headers: { "X-Auth-ID": authId, "X-Auth-Token": "YOUR_AUTH_TOKEN" } }
+);
+```
+
+</CodeGroup>
+
+---
+
+## Kick a member
+
+Disconnect a member but allow XML flow continuation. The member can hear any XML elements served after being kicked.
+
+**POST** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Member/{member_id}/Kick/`
+
+---
+
+## Mute a member
+
+Mute a member's audio so other participants cannot hear them. The muted member can still hear the conference.
+
+**POST** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Member/{member_id}/Mute/`
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST "https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/My%20Conf%20Room/Member/17/Mute/" \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+response = requests.post(
+    f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/My%20Conf%20Room/Member/17/Mute/",
+    headers={"X-Auth-ID": auth_id, "X-Auth-Token": "YOUR_AUTH_TOKEN"}
+)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+const authId = "YOUR_AUTH_ID";
+const response = await axios.post(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Conference/My%20Conf%20Room/Member/17/Mute/`,
+  {},
+  { headers: { "X-Auth-ID": authId, "X-Auth-Token": "YOUR_AUTH_TOKEN" } }
+);
+console.log(response.data);
+```
+
+</CodeGroup>
+
+---
+
+## Unmute a member
+
+Restore audio for a previously muted member so other participants can hear them again.
+
+**DELETE** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Member/{member_id}/Mute/`
+
+---
+
+## Deaf a member
+
+Prevent a member from hearing conference audio. They can still speak but will not hear other participants.
+
+**POST** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Member/{member_id}/Deaf/`
+
+---
+
+## Undeaf a member
+
+Restore hearing for a deafened member so they can hear conference audio again.
+
+**DELETE** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Member/{member_id}/Deaf/`
+
+---
+
+## Play audio to a member
+
+Play an audio file to one or more conference members. Useful for announcements or hold music.
+
+**POST** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Member/{member_id}/Play/`
+
+### Body parameters
+
+<ParamField body="url" type="string" required>
+  HTTPS URL of the audio file to play (MP3 or WAV).
+</ParamField>
+
+---
+
+## Stop audio playback for a member
+
+Stop ongoing audio playback for one or more members.
+
+**DELETE** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Member/{member_id}/Play/`
+
+---
+
+## Speak text to a member
+
+Convert text to speech and play it to one or more conference members using the Vobiz TTS engine.
+
+**POST** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Member/{member_id}/Speak/`
+
+### Body parameters
+
+<ParamField body="text" type="string" required>
+  The text to convert to speech and play to the member.
+</ParamField>
+
+---
+
+## Stop text-to-speech for a member
+
+Stop ongoing TTS playback for one or more members.
+
+**DELETE** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Member/{member_id}/Speak/`
+
+---
+
+<Tip>
+  To mute all members at once (for example, at the start of a webinar), use the `all` targeting syntax: `/Member/all/Mute/`.
+</Tip>

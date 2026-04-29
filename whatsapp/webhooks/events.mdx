@@ -1,0 +1,504 @@
+---
+title: "WhatsApp Webhook Events Reference — All Event Types"
+description: "Complete reference for every Vobiz WhatsApp webhook event: payload structure, response fields, and example JSON for each event type."
+sidebarTitle: "Events reference"
+---
+
+This page documents every webhook event that Vobiz sends for WhatsApp channels. Each event arrives as an HTTPS POST request with a JSON body and an `X-Vobiz-Signature` header for verification. See the [Webhooks guide](/whatsapp/webhooks) for instructions on configuring your endpoint and verifying signatures.
+
+## Common event structure
+
+Every webhook event shares the same top-level fields regardless of type.
+
+```json
+{
+  "event": "event.type",
+  "event_id": "evt_1234567890abcdef",
+  "timestamp": "2026-03-19T10:30:00Z",
+  "channel_id": "ch_abc123",
+  "data": {}
+}
+```
+
+<ResponseField name="event" type="string">
+  The event type identifier (e.g., `"message.received"`). Use this field to route events to the correct handler in your application.
+</ResponseField>
+
+<ResponseField name="event_id" type="string">
+  A unique identifier for this specific event occurrence. Use this to deduplicate events — Vobiz may deliver the same event more than once if your endpoint doesn't respond with HTTP `200` in time.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string">
+  ISO 8601 timestamp of when the event occurred on Vobiz's servers.
+</ResponseField>
+
+<ResponseField name="channel_id" type="string">
+  The ID of the WhatsApp channel this event relates to. Matches the channel IDs shown in the Vobiz console and returned by the Channels API.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Event-specific payload. The structure varies by event type and is documented in full below.
+</ResponseField>
+
+---
+
+## message.received
+
+Triggered when a customer sends a message to your WhatsApp channel. This is the most frequently fired event and is essential for building conversational experiences, support workflows, and chatbots.
+
+### Supported message types in `data.type`
+
+`text` · `image` · `video` · `audio` · `document` · `location` · `contacts` · `button` · `interactive`
+
+### Text message example
+
+```json
+{
+  "event": "message.received",
+  "event_id": "evt_msg_recv_123",
+  "timestamp": "2026-03-19T10:30:45Z",
+  "channel_id": "ch_abc123",
+  "data": {
+    "message_id": "wamid.HBgNMTIzNDU2Nzg5MAA=",
+    "from": "+1234567890",
+    "contact": {
+      "id": "cnt_xyz789",
+      "name": "Jane Smith",
+      "phone": "+1234567890"
+    },
+    "type": "text",
+    "text": {
+      "body": "Hello, I have a question about my order"
+    },
+    "timestamp": "2026-03-19T10:30:45Z",
+    "context": null
+  }
+}
+```
+
+### Image message example
+
+```json
+{
+  "event": "message.received",
+  "event_id": "evt_msg_recv_124",
+  "timestamp": "2026-03-19T10:31:00Z",
+  "channel_id": "ch_abc123",
+  "data": {
+    "message_id": "wamid.HBgNMTIzNDU2Nzg5MABB",
+    "from": "+1234567890",
+    "contact": {
+      "id": "cnt_xyz789",
+      "name": "Jane Smith",
+      "phone": "+1234567890"
+    },
+    "type": "image",
+    "image": {
+      "id": "img_123456",
+      "mime_type": "image/jpeg",
+      "sha256": "abc123def456...",
+      "caption": "Product I received — can you check this?"
+    },
+    "timestamp": "2026-03-19T10:31:00Z"
+  }
+}
+```
+
+### `data` fields
+
+<ResponseField name="data.message_id" type="string">
+  WhatsApp-assigned message ID for this incoming message.
+</ResponseField>
+
+<ResponseField name="data.from" type="string">
+  Sender's phone number in E.164 format.
+</ResponseField>
+
+<ResponseField name="data.contact" type="object">
+  Contact record in Vobiz for the sender.
+
+  <ResponseField name="data.contact.id" type="string">
+    Vobiz contact ID.
+  </ResponseField>
+
+  <ResponseField name="data.contact.name" type="string">
+    Contact's display name, if known.
+  </ResponseField>
+
+  <ResponseField name="data.contact.phone" type="string">
+    Contact's phone number in E.164 format.
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="data.type" type="string">
+  The type of message received. One of: `text`, `image`, `video`, `audio`, `document`, `location`, `contacts`, `button`, `interactive`.
+</ResponseField>
+
+<ResponseField name="data.text" type="object">
+  Present when `type` is `"text"`.
+
+  <ResponseField name="data.text.body" type="string">
+    The text content of the message.
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="data.image" type="object">
+  Present when `type` is `"image"`.
+
+  <ResponseField name="data.image.id" type="string">Media ID assigned by WhatsApp.</ResponseField>
+  <ResponseField name="data.image.mime_type" type="string">MIME type of the image (e.g., `"image/jpeg"`).</ResponseField>
+  <ResponseField name="data.image.sha256" type="string">SHA-256 hash of the file for integrity verification.</ResponseField>
+  <ResponseField name="data.image.caption" type="string">Optional caption included with the image.</ResponseField>
+</ResponseField>
+
+<ResponseField name="data.timestamp" type="string">
+  ISO 8601 timestamp of when the message was sent by the customer.
+</ResponseField>
+
+<ResponseField name="data.context" type="object | null">
+  Present when the customer replied to a specific message. Contains the `message_id` of the original message. `null` if this is a new message.
+</ResponseField>
+
+**Common uses:** Create support tickets, route inquiries to agents, trigger chatbot flows, or log conversations in your CRM.
+
+---
+
+## message.sent
+
+Triggered when a message from your business is accepted by WhatsApp's servers. This confirms the message left Vobiz successfully but does not mean it has been delivered to the recipient's device yet.
+
+### Example
+
+```json
+{
+  "event": "message.sent",
+  "event_id": "evt_msg_sent_125",
+  "timestamp": "2026-03-19T10:32:00Z",
+  "channel_id": "ch_abc123",
+  "data": {
+    "message_id": "wamid.HBgNMTIzNDU2Nzg5MCC=",
+    "to": "+1234567890",
+    "type": "text",
+    "status": "sent",
+    "timestamp": "2026-03-19T10:32:00Z"
+  }
+}
+```
+
+### `data` fields
+
+<ResponseField name="data.message_id" type="string">
+  The WhatsApp message ID. Matches the `message_id` returned by the Send Message API.
+</ResponseField>
+
+<ResponseField name="data.to" type="string">
+  Recipient phone number in E.164 format.
+</ResponseField>
+
+<ResponseField name="data.type" type="string">
+  The type of message that was sent.
+</ResponseField>
+
+<ResponseField name="data.status" type="string">
+  Always `"sent"` for this event.
+</ResponseField>
+
+<ResponseField name="data.timestamp" type="string">
+  ISO 8601 timestamp of when the send was accepted.
+</ResponseField>
+
+**Common uses:** Update message status in your UI, log outbound messages for compliance, or confirm that automated sends completed successfully.
+
+---
+
+## message.delivered
+
+Triggered when a sent message is successfully delivered to the recipient's device. This corresponds to the double gray checkmarks in WhatsApp.
+
+### Example
+
+```json
+{
+  "event": "message.delivered",
+  "event_id": "evt_msg_dlv_126",
+  "timestamp": "2026-03-19T10:32:05Z",
+  "channel_id": "ch_abc123",
+  "data": {
+    "message_id": "wamid.HBgNMTIzNDU2Nzg5MCC=",
+    "to": "+1234567890",
+    "status": "delivered",
+    "timestamp": "2026-03-19T10:32:05Z"
+  }
+}
+```
+
+### `data` fields
+
+<ResponseField name="data.message_id" type="string">
+  WhatsApp message ID of the delivered message.
+</ResponseField>
+
+<ResponseField name="data.to" type="string">
+  Recipient phone number in E.164 format.
+</ResponseField>
+
+<ResponseField name="data.status" type="string">
+  Always `"delivered"` for this event.
+</ResponseField>
+
+<ResponseField name="data.timestamp" type="string">
+  ISO 8601 timestamp of when delivery was confirmed.
+</ResponseField>
+
+<Note>
+  Delivery confirms the message reached the recipient's phone, not that they have read it. The message may still be unread in their WhatsApp inbox.
+</Note>
+
+**Common uses:** Update CRM with delivery confirmations, monitor campaign delivery rates, or log delivery for compliance.
+
+---
+
+## message.read
+
+Triggered when a recipient opens your message. This corresponds to the blue double checkmarks in WhatsApp.
+
+### Example
+
+```json
+{
+  "event": "message.read",
+  "event_id": "evt_msg_read_127",
+  "timestamp": "2026-03-19T10:35:30Z",
+  "channel_id": "ch_abc123",
+  "data": {
+    "message_id": "wamid.HBgNMTIzNDU2Nzg5MCC=",
+    "to": "+1234567890",
+    "status": "read",
+    "timestamp": "2026-03-19T10:35:30Z"
+  }
+}
+```
+
+### `data` fields
+
+<ResponseField name="data.message_id" type="string">
+  WhatsApp message ID of the read message.
+</ResponseField>
+
+<ResponseField name="data.to" type="string">
+  Recipient phone number in E.164 format.
+</ResponseField>
+
+<ResponseField name="data.status" type="string">
+  Always `"read"` for this event.
+</ResponseField>
+
+<ResponseField name="data.timestamp" type="string">
+  ISO 8601 timestamp of when the message was read.
+</ResponseField>
+
+<Info>
+  Recipients can disable read receipts in WhatsApp settings. If a user has disabled them, you will not receive `message.read` events for their messages even if they have opened and read them.
+</Info>
+
+**Common uses:** Calculate campaign open rates, notify sales teams when prospects read messages, or trigger follow-up workflows after a message is read.
+
+---
+
+## message.failed
+
+Triggered when a message fails to send. The event includes a structured error that identifies why the delivery failed.
+
+### Example
+
+```json
+{
+  "event": "message.failed",
+  "event_id": "evt_msg_fail_128",
+  "timestamp": "2026-03-19T10:32:10Z",
+  "channel_id": "ch_abc123",
+  "data": {
+    "message_id": "wamid.HBgNMTIzNDU2Nzg5MDD=",
+    "to": "+9999999999",
+    "status": "failed",
+    "error": {
+      "code": "INVALID_NUMBER",
+      "message": "Phone number not registered on WhatsApp",
+      "details": "The recipient number is not a valid WhatsApp account"
+    },
+    "timestamp": "2026-03-19T10:32:10Z"
+  }
+}
+```
+
+### `data` fields
+
+<ResponseField name="data.message_id" type="string">
+  WhatsApp message ID of the failed message.
+</ResponseField>
+
+<ResponseField name="data.to" type="string">
+  Recipient phone number that the send was attempted for.
+</ResponseField>
+
+<ResponseField name="data.status" type="string">
+  Always `"failed"` for this event.
+</ResponseField>
+
+<ResponseField name="data.error" type="object">
+  Structured error information.
+
+  <ResponseField name="data.error.code" type="string">
+    Machine-readable error code. Common values are listed below.
+  </ResponseField>
+
+  <ResponseField name="data.error.message" type="string">
+    Human-readable description of the failure.
+  </ResponseField>
+
+  <ResponseField name="data.error.details" type="string">
+    Additional context to help diagnose and resolve the issue.
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="data.timestamp" type="string">
+  ISO 8601 timestamp of when the failure occurred.
+</ResponseField>
+
+### Common error codes
+
+| Code | Description |
+| --- | --- |
+| `INVALID_NUMBER` | Phone number is not registered on WhatsApp |
+| `BLOCKED` | The recipient has blocked your business number |
+| `RATE_LIMIT` | Your channel's messaging rate limit was exceeded |
+| `TEMPLATE_NOT_FOUND` | Template does not exist or has not been approved by Meta |
+| `PARAMETER_ERROR` | Template parameters are invalid or missing |
+
+**Common uses:** Alert staff about failed sends, remove invalid numbers from your contact list, or trigger fallback communication via email or SMS.
+
+---
+
+## contact.updated
+
+Triggered when a contact is created or updated in Vobiz, including changes to contact details, tags, or custom attributes.
+
+### Example
+
+```json
+{
+  "event": "contact.updated",
+  "event_id": "evt_cnt_upd_129",
+  "timestamp": "2026-03-19T11:00:00Z",
+  "channel_id": "ch_abc123",
+  "data": {
+    "contact": {
+      "id": "cnt_xyz789",
+      "phone": "+1234567890",
+      "name": "Jane Smith",
+      "email": "jane@example.com",
+      "tags": ["customer", "vip"],
+      "custom_attributes": {
+        "customer_id": "CUST-001",
+        "total_orders": 5
+      },
+      "created_at": "2026-01-15T09:00:00Z",
+      "updated_at": "2026-03-19T11:00:00Z"
+    },
+    "action": "updated"
+  }
+}
+```
+
+### `data` fields
+
+<ResponseField name="data.contact" type="object">
+  Full contact record at the time of the event.
+
+  <ResponseField name="data.contact.id" type="string">Vobiz contact ID.</ResponseField>
+  <ResponseField name="data.contact.phone" type="string">Contact phone number in E.164 format.</ResponseField>
+  <ResponseField name="data.contact.name" type="string">Contact display name.</ResponseField>
+  <ResponseField name="data.contact.email" type="string">Contact email address, if available.</ResponseField>
+  <ResponseField name="data.contact.tags" type="array">Array of tag strings applied to this contact.</ResponseField>
+  <ResponseField name="data.contact.custom_attributes" type="object">Key-value map of custom attributes assigned to the contact.</ResponseField>
+  <ResponseField name="data.contact.created_at" type="string">ISO 8601 timestamp of contact creation.</ResponseField>
+  <ResponseField name="data.contact.updated_at" type="string">ISO 8601 timestamp of the most recent update.</ResponseField>
+</ResponseField>
+
+<ResponseField name="data.action" type="string">
+  Either `"created"` or `"updated"`, indicating whether this is a new contact or a change to an existing one.
+</ResponseField>
+
+**Common uses:** Sync contacts with your CRM, trigger workflows when tags change (e.g., when a contact is tagged `"churned"`), or maintain a backup of your contact database.
+
+---
+
+## campaign.completed
+
+Triggered when a broadcast campaign finishes sending all its messages. The event includes comprehensive statistics about campaign performance.
+
+### Example
+
+```json
+{
+  "event": "campaign.completed",
+  "event_id": "evt_cmp_cmp_130",
+  "timestamp": "2026-03-19T14:30:00Z",
+  "channel_id": "ch_abc123",
+  "data": {
+    "campaign": {
+      "id": "cmp_spring_sale_2026",
+      "name": "Spring Sale 2026",
+      "status": "completed",
+      "started_at": "2026-03-19T10:00:00Z",
+      "completed_at": "2026-03-19T14:30:00Z",
+      "statistics": {
+        "total": 10000,
+        "sent": 10000,
+        "delivered": 9850,
+        "read": 8920,
+        "failed": 150,
+        "responses": 2150
+      }
+    }
+  }
+}
+```
+
+### `data` fields
+
+<ResponseField name="data.campaign" type="object">
+  Full campaign record at completion.
+
+  <ResponseField name="data.campaign.id" type="string">Vobiz campaign ID.</ResponseField>
+  <ResponseField name="data.campaign.name" type="string">Campaign display name.</ResponseField>
+  <ResponseField name="data.campaign.status" type="string">Always `"completed"` for this event.</ResponseField>
+  <ResponseField name="data.campaign.started_at" type="string">ISO 8601 timestamp of when the campaign began sending.</ResponseField>
+  <ResponseField name="data.campaign.completed_at" type="string">ISO 8601 timestamp of when the last message was processed.</ResponseField>
+
+  <ResponseField name="data.campaign.statistics" type="object">
+    Aggregate delivery and engagement metrics.
+
+    <ResponseField name="data.campaign.statistics.total" type="integer">Total number of recipients targeted.</ResponseField>
+    <ResponseField name="data.campaign.statistics.sent" type="integer">Number of messages accepted by WhatsApp servers.</ResponseField>
+    <ResponseField name="data.campaign.statistics.delivered" type="integer">Number of messages confirmed delivered to devices.</ResponseField>
+    <ResponseField name="data.campaign.statistics.read" type="integer">Number of messages opened by recipients.</ResponseField>
+    <ResponseField name="data.campaign.statistics.failed" type="integer">Number of messages that failed to deliver.</ResponseField>
+    <ResponseField name="data.campaign.statistics.responses" type="integer">Number of recipients who replied to the campaign message.</ResponseField>
+  </ResponseField>
+</ResponseField>
+
+**Common uses:** Send performance reports to stakeholders, trigger follow-up campaigns based on results, or log campaign metrics in your analytics platform.
+
+---
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Webhooks guide" href="/whatsapp/webhooks">
+    Configure your webhook endpoint, verify signatures, and handle retries.
+  </Card>
+  <Card title="Send Message API" href="/whatsapp/api/send-message">
+    Send replies and proactive messages programmatically.
+  </Card>
+</CardGroup>

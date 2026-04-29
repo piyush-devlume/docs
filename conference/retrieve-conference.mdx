@@ -1,0 +1,116 @@
+---
+title: "Retrieve details of a specific conference"
+description: "Get the real-time state of a named conference including runtime, active member count, and per-member mute, deaf, and call details."
+sidebarTitle: "Retrieve conference"
+---
+
+Use this endpoint to retrieve the full state of a specific ongoing conference by name. The response includes how long the conference has been running, the number of active members, and a detailed object for each participant. You can use the returned `member_id` values to perform member-level operations such as mute, deaf, or kick.
+
+**GET** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/`
+
+<Note>
+  URL-encode conference names that contain spaces or special characters. A space becomes `%20` (e.g., `My Conf Room` → `My%20Conf%20Room`).
+</Note>
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+<ParamField path="conference_name" type="string" required>
+  Name of the conference to retrieve. Must be URL-encoded.
+</ParamField>
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/My%20Conf%20Room/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+from urllib.parse import quote
+
+auth_id = "YOUR_AUTH_ID"
+conference_name = quote("My Conf Room")
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.get(url, headers=headers)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const conferenceName = encodeURIComponent("My Conf Room");
+
+const response = await axios.get(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Conference/${conferenceName}/`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response fields
+
+<ResponseField name="conference_name" type="string">
+  Name of the conference.
+</ResponseField>
+
+<ResponseField name="conference_run_time" type="string">
+  Duration in seconds since the conference started.
+</ResponseField>
+
+<ResponseField name="conference_member_count" type="string">
+  Number of active members currently in the conference.
+</ResponseField>
+
+<ResponseField name="members" type="array">
+  Array of member objects. Each object includes `member_id`, `muted`, `deaf`, `from`, `to`, `caller_name`, `direction`, `call_uuid`, and `join_time`. See the [Conference object](/conference/conference-object) for full field descriptions.
+</ResponseField>
+
+<ResponseField name="api_id" type="string">
+  Unique identifier for this API request.
+</ResponseField>
+
+## Example response
+
+```json 200 OK
+{
+  "conference_name": "My Conf Room",
+  "conference_run_time": "590",
+  "conference_member_count": "1",
+  "members": [
+    {
+      "muted": false,
+      "member_id": "17",
+      "deaf": false,
+      "from": "1456789903",
+      "to": "1677889900",
+      "caller_name": "John",
+      "direction": "inbound",
+      "call_uuid": "acfbf0b5-12e0-4d74-85f7-fce15f8f07ec",
+      "join_time": "590"
+    }
+  ],
+  "api_id": "816e903e-58c4-11e1-86da-adf28403fe48"
+}
+```

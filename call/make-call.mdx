@@ -1,0 +1,261 @@
+---
+title: "Make an Outbound Call via the Vobiz API"
+description: "Initiate outbound calls to PSTN numbers or SIP endpoints. Configure callbacks, answering machine detection, and call limits in one API request."
+---
+
+Use this endpoint to place outbound calls to a PSTN number or SIP URI. Supply a single destination in `to`, or use `<` as a separator to dial up to 1000 destinations simultaneously for bulk or predictive dialing use cases.
+
+```
+POST https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/
+```
+
+<Tip>
+  Separate multiple destinations with `<` (for example, `14157654321<14153464321<sip:john1234@api.vobiz.ai`). The system fires all legs in parallel.
+</Tip>
+
+## Required parameters
+
+<ParamField body="from" type="string" required>
+  Caller ID in E.164 format (for example, `14157654321`). Must be a Vobiz number on your account.
+</ParamField>
+
+<ParamField body="to" type="string" required>
+  Destination number(s) or SIP URI(s). Use `<` to separate multiple destinations (maximum 1000). Examples: `14157654321`, `sip:john1234@api.vobiz.ai`.
+</ParamField>
+
+<ParamField body="answer_url" type="string" required>
+  URL fetched when the call is answered. Must return valid Vobiz XML instructions.
+</ParamField>
+
+## Callback parameters
+
+<ParamField body="answer_method" type="string" default="POST">
+  HTTP method used to request `answer_url`. Accepted values: `GET`, `POST`.
+</ParamField>
+
+<ParamField body="ring_url" type="string">
+  URL notified when the call starts ringing. Receives ringing-state parameters.
+</ParamField>
+
+<ParamField body="ring_method" type="string" default="POST">
+  HTTP method for `ring_url`. Accepted values: `GET`, `POST`.
+</ParamField>
+
+<ParamField body="hangup_url" type="string">
+  URL notified when the call is hung up. Receives final call status and CDR fields.
+</ParamField>
+
+<ParamField body="hangup_method" type="string" default="POST">
+  HTTP method for `hangup_url`. Accepted values: `GET`, `POST`.
+</ParamField>
+
+<ParamField body="fallback_url" type="string">
+  Invoked automatically if `answer_url` fails after 3 retries or a 60-second timeout. Must return valid XML.
+</ParamField>
+
+<ParamField body="fallback_method" type="string" default="POST">
+  HTTP method for `fallback_url`. Accepted values: `GET`, `POST`.
+</ParamField>
+
+## Machine detection parameters
+
+<Note>
+  For full machine detection documentation, see the [Machine Detection](/call/machine-detection) page.
+</Note>
+
+<ParamField body="machine_detection" type="string">
+  Enable answering machine detection. Set to `true` to continue the call when a machine is detected, or `hangup` to terminate automatically.
+</ParamField>
+
+<ParamField body="machine_detection_time" type="integer" default="5000">
+  Time in milliseconds to analyze audio for machine detection. Allowed range: `2000`–`10000`.
+</ParamField>
+
+<ParamField body="machine_detection_url" type="string">
+  Callback URL invoked asynchronously when machine detection completes. Receives detection results.
+</ParamField>
+
+<ParamField body="machine_detection_method" type="string" default="POST">
+  HTTP method for `machine_detection_url`.
+</ParamField>
+
+<ParamField body="machine_detection_maximum_speech_length" type="integer" default="5000">
+  Maximum speech duration in milliseconds for detection analysis. Allowed range: `1000`–`6000`.
+</ParamField>
+
+<ParamField body="machine_detection_initial_silence" type="integer" default="4500">
+  Maximum silence after answer in milliseconds before detection concludes. Allowed range: `2000`–`10000`.
+</ParamField>
+
+<ParamField body="machine_detection_maximum_words" type="integer" default="3">
+  Maximum number of sentences analyzed during detection. Allowed range: `2`–`10`.
+</ParamField>
+
+<ParamField body="machine_detection_initial_greeting" type="integer" default="1500">
+  Maximum greeting length in milliseconds. Allowed range: `1000`–`5000`.
+</ParamField>
+
+## Advanced parameters
+
+<ParamField body="caller_name" type="string">
+  Caller name displayed to the recipient. Maximum 50 characters. Defaults to the registered caller name.
+</ParamField>
+
+<ParamField body="send_digits" type="string">
+  DTMF digits sent automatically after the call connects. Use `w` for a 0.5-second wait and `W` for a 1-second wait (for example, `1w2W3`). You can also specify tone duration in milliseconds with `@` (for example, `123@1000`).
+</ParamField>
+
+<ParamField body="send_on_preanswer" type="boolean" default="false">
+  When `true`, sends `send_digits` during the pre-answer state instead of after answer.
+</ParamField>
+
+<ParamField body="time_limit" type="integer" default="14400">
+  Maximum call duration in seconds after the call is answered. Calls reaching 86400 seconds (24 hours) are disconnected automatically.
+</ParamField>
+
+<ParamField body="hangup_on_ring" type="integer">
+  Maximum duration in seconds from the start of ringing to automatic hangup if the call is not answered.
+</ParamField>
+
+## Code examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "14155551234",
+    "to": "14155555678",
+    "answer_url": "https://example.com/answer",
+    "answer_method": "POST"
+  }'
+```
+
+```python Python
+import requests
+
+url = "https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+payload = {
+    "from": "14155551234",
+    "to": "14155555678",
+    "answer_url": "https://example.com/answer",
+    "answer_method": "POST",
+    "hangup_url": "https://example.com/hangup",
+    "caller_name": "John Doe"
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const response = await axios.post(
+  "https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/",
+  {
+    from: "14155551234",
+    to: "14155555678",
+    answer_url: "https://example.com/answer",
+    answer_method: "POST",
+    hangup_url: "https://example.com/hangup",
+    caller_name: "John Doe"
+  },
+  {
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json"
+    }
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response
+
+A successful request returns HTTP `201 Created` with the following fields.
+
+```json
+{
+  "api_id": "97ceeb52-58b6-11e1-86da-77300b68f8bb",
+  "message": "call fired",
+  "request_uuid": "9834029e-58b6-11e1-b8b7-a5bd0e4e126f"
+}
+```
+
+<ResponseField name="api_id" type="string">
+  Unique identifier for this API request.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Confirmation message. Returns `"call fired"` on success.
+</ResponseField>
+
+<ResponseField name="request_uuid" type="string">
+  Unique identifier for the call. Also referred to as `call_uuid` — both are equivalent.
+</ResponseField>
+
+## Callback parameters
+
+Vobiz posts status updates to your configured callback URLs throughout the call lifecycle.
+
+<AccordionGroup>
+  <Accordion title="Parameters sent to ring_url">
+    <ResponseField name="From" type="string">Caller ID used to initiate the call.</ResponseField>
+    <ResponseField name="To" type="string">Destination number called.</ResponseField>
+    <ResponseField name="RequestUUID" type="string">Unique identifier for the call request.</ResponseField>
+    <ResponseField name="ALegRequestUUID" type="string">Identifies the first leg of the call when multiple legs exist.</ResponseField>
+    <ResponseField name="CallUUID" type="string">Unique identifier for the call.</ResponseField>
+    <ResponseField name="Direction" type="string">Direction of the call. Always `"outbound"` here.</ResponseField>
+    <ResponseField name="Event" type="string">Event that triggered this notification. Always `"Ring"`.</ResponseField>
+    <ResponseField name="CallStatus" type="string">Status of the call. Always `"ringing"`.</ResponseField>
+    <ResponseField name="SessionStart" type="string">Timestamp when early media started. Format: `YYYY-MM-DD HH:mm:ss.sssss` UTC.</ResponseField>
+    <ResponseField name="STIRAttestation" type="string">Attestation level assigned to the call by Vobiz.</ResponseField>
+  </Accordion>
+
+  <Accordion title="Parameters sent to answer_url and fallback_url">
+    <ResponseField name="From" type="string">Caller ID used to initiate the call.</ResponseField>
+    <ResponseField name="To" type="string">Destination number called.</ResponseField>
+    <ResponseField name="CallerName" type="string">Name of the caller if placed from a SIP endpoint.</ResponseField>
+    <ResponseField name="RequestUUID" type="string">Unique identifier for the call request.</ResponseField>
+    <ResponseField name="ALegRequestUUID" type="string">Identifies the first leg when multiple legs exist.</ResponseField>
+    <ResponseField name="CallUUID" type="string">Unique identifier for the call.</ResponseField>
+    <ResponseField name="Direction" type="string">Direction of the call. Always `"outbound"`.</ResponseField>
+    <ResponseField name="ALegUUID" type="string">Unique identifier for the A-leg of the call.</ResponseField>
+    <ResponseField name="Event" type="string">Event that triggered this notification. Always `"StartApp"`.</ResponseField>
+    <ResponseField name="STIRVerification" type="string">Attestation details. Possible values: `Verified`, `Not Verified`, `Not Applicable`.</ResponseField>
+    <ResponseField name="CallStatus" type="string">Status of the call. Always `"in-progress"`.</ResponseField>
+    <ResponseField name="SessionStart" type="string">Timestamp when early media started. Format: `YYYY-MM-DD HH:mm:ss.sssss` UTC.</ResponseField>
+    <ResponseField name="STIRAttestation" type="string">Attestation level assigned to the call by Vobiz.</ResponseField>
+  </Accordion>
+
+  <Accordion title="Parameters sent to hangup_url">
+    <ResponseField name="From" type="string">Caller ID used to initiate the call.</ResponseField>
+    <ResponseField name="To" type="string">Destination number called.</ResponseField>
+    <ResponseField name="RequestUUID" type="string">Unique identifier for the call request.</ResponseField>
+    <ResponseField name="ALegRequestUUID" type="string">Identifies the first leg when multiple legs exist.</ResponseField>
+    <ResponseField name="CallUUID" type="string">Unique identifier for the call.</ResponseField>
+    <ResponseField name="Direction" type="string">Direction of the call. Always `"outbound"`.</ResponseField>
+    <ResponseField name="ALegUUID" type="string">Unique identifier for the A-leg of the call.</ResponseField>
+    <ResponseField name="Event" type="string">Event that triggered this notification. Always `"Hangup"`.</ResponseField>
+    <ResponseField name="stir_verification" type="string">Attestation details. Possible values: `Verified`, `Not Verified`, `Not Applicable`.</ResponseField>
+    <ResponseField name="CallStatus" type="string">Status of the call. Always `"completed"`.</ResponseField>
+    <ResponseField name="StartTime" type="string">Timestamp when the call was initiated. Local timezone. Format: `yyyy-MM-dd HH:mm:ss`.</ResponseField>
+    <ResponseField name="AnswerTime" type="string">Timestamp when the call was answered. Local timezone. Format: `yyyy-MM-dd HH:mm:ss`.</ResponseField>
+    <ResponseField name="SessionStart" type="string">Timestamp when early media started. Format: `YYYY-MM-DD HH:mm:ss.sssss` UTC.</ResponseField>
+    <ResponseField name="EndTime" type="string">Timestamp when the call ended. Local timezone. Format: `yyyy-MM-dd HH:mm:ss`.</ResponseField>
+    <ResponseField name="STIRAttestation" type="string">Attestation level assigned to the call by Vobiz.</ResponseField>
+  </Accordion>
+</AccordionGroup>

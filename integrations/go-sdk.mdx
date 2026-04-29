@@ -1,0 +1,109 @@
+---
+title: "Vobiz Go SDK — installation and usage"
+description: "Install and use the Vobiz Go SDK. Make calls, build typed XML flows, stream audio, and manage conferences from a Go application with idiomatic patterns."
+sidebarTitle: "Go SDK"
+---
+
+The official Vobiz Go SDK provides a strongly typed interface to the Vobiz Voice API. Use it to make outbound calls, build VobizXML call flows with compile-time safety, stream audio to live calls, and manage conferences—all without writing raw HTTP clients.
+
+**Source code:** [vobiz-ai/vobiz-go-sdk](https://github.com/vobiz-ai/vobiz-go-sdk)
+
+## Installation
+
+Clone the repository and resolve dependencies:
+
+```bash
+git clone https://github.com/vobiz-ai/Vobiz-Go-SDK.git
+cd Vobiz-Go-SDK
+go mod tidy
+```
+
+## Authentication
+
+Your **Auth ID** and **Auth Token** are available in the [Vobiz Console](https://console.vobiz.ai).
+
+```go
+import "github.com/vobiz-ai/vobiz-go-sdk/client"
+
+c := client.New("YOUR_AUTH_ID", "YOUR_AUTH_TOKEN")
+```
+
+## Quick start: make an outbound call
+
+Pass your source number, destination number, and webhook URLs using the `CreateParams` struct. When the call connects, Vobiz sends a POST to your `AnswerURL`. Respond with valid VobizXML to control the call.
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/vobiz-ai/vobiz-go-sdk/client"
+    "github.com/vobiz-ai/vobiz-go-sdk/services/calls"
+)
+
+func main() {
+    c := client.New("YOUR_AUTH_ID", "YOUR_AUTH_TOKEN")
+
+    call, err := calls.New(c).Create(&calls.CreateParams{
+        From:         "+1xxxxxxxxxx",
+        To:           "+1xxxxxxxxxx",
+        AnswerURL:    "https://yourserver.com/answer",
+        AnswerMethod: "POST",
+    })
+    if err != nil {
+        panic(err)
+    }
+    fmt.Println("Call UUID:", call.RequestUUID)
+}
+```
+
+## Building call flows with VobizXML
+
+The `xml` package provides a strongly typed builder that outputs valid VobizXML. All available verbs (Gather, Record, Dial, Speak) are represented as typed structs, giving you IDE completion and compile-time validation.
+
+```go
+import "github.com/vobiz-ai/vobiz-go-sdk/xml"
+
+response := xml.NewResponse()
+response.AddSpeak("Welcome to Vobiz!", "WOMAN", "en-US")
+response.AddRecord(xml.RecordParams{
+    Action:    "https://yourserver.com/recording",
+    MaxLength: 30,
+    PlayBeep:  true,
+})
+
+fmt.Println(response.ToXML())
+```
+
+## Live audio routing
+
+Stream audio to an active call:
+
+```go
+svc := calls.New(c)
+
+svc.Play("call-uuid", &calls.PlayParams{
+    URLs: []string{"https://example.com/audio.mp3"},
+    Legs: "aleg",
+})
+```
+
+## Conference management
+
+```go
+import "github.com/vobiz-ai/vobiz-go-sdk/services/conferences"
+
+svc := conferences.New(c)
+
+// Remove a participant from a conference
+svc.Member.Delete("conference-name", "member-id")
+
+// Record the entire conference
+svc.Record("conference-name", &conferences.RecordParams{FileFormat: "mp3"})
+```
+
+## Next steps
+
+- See the [Node.js SDK](/integrations/node-sdk) for equivalent JavaScript examples.
+- See the [Python SDK](/integrations/python-sdk) for equivalent Python examples.
+- Use the [WebSockets guide](/integrations/websockets) to stream live call audio to an AI agent.

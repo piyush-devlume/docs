@@ -1,0 +1,232 @@
+---
+title: "Transfer a Call to a New XML URL"
+description: "Redirect an active call's A-leg, B-leg, or both legs to a new URL that returns XML instructions for the next step in your call flow."
+---
+
+Use this endpoint to redirect an in-progress call to a different XML URL. Vobiz immediately fetches the new URL and executes the XML it returns, allowing you to change call behavior mid-conversation — for example, routing to a different queue, playing an announcement, or initiating a warm transfer.
+
+```
+POST https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/
+```
+
+<Warning>
+  Transfer operations interrupt the current call flow immediately. Ensure your transfer URL is reachable and returns valid Vobiz XML before triggering a transfer.
+</Warning>
+
+<Note>
+  The call must be in an active (`in-progress`) state to be transferred. You can transfer the A-leg, B-leg, or both legs independently using their respective UUIDs.
+</Note>
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account Auth ID.
+</ParamField>
+
+<ParamField path="call_uuid" type="string" required>
+  Unique identifier of the active call to transfer.
+</ParamField>
+
+## Request parameters
+
+<ParamField body="legs" type="string" default="aleg">
+  Specifies which leg(s) to transfer. Accepted values:
+
+  - `aleg` — Transfer only the caller (A-leg) to `aleg_url`.
+  - `bleg` — Transfer only the callee (B-leg) to `bleg_url`.
+  - `both` — Transfer both legs to their respective URLs. Requires both `aleg_url` and `bleg_url`.
+</ParamField>
+
+<ParamField body="aleg_url" type="string">
+  URL to transfer the A-leg (caller) to. Must return valid Vobiz XML with call instructions.
+</ParamField>
+
+<ParamField body="aleg_method" type="string" default="POST">
+  HTTP method used to request `aleg_url`. Accepted values: `GET`, `POST`.
+</ParamField>
+
+<ParamField body="bleg_url" type="string">
+  URL to transfer the B-leg (callee) to. Must return valid Vobiz XML with call instructions.
+</ParamField>
+
+<ParamField body="bleg_method" type="string" default="POST">
+  HTTP method used to request `bleg_url`. Accepted values: `GET`, `POST`.
+</ParamField>
+
+## Response
+
+A successful request returns HTTP `202 Accepted`.
+
+```json
+{
+  "api_id": "uuid-here",
+  "message": "call transferred",
+  "call_uuid": "call-uuid-here"
+}
+```
+
+<ResponseField name="api_id" type="string">
+  Unique identifier for this API request.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Confirmation message. Returns `"call transferred"` on success.
+</ResponseField>
+
+<ResponseField name="call_uuid" type="string">
+  UUID of the call that was transferred.
+</ResponseField>
+
+## Code examples
+
+<Tabs>
+  <Tab title="Transfer A-leg only">
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X POST \
+      https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/ \
+      -H "X-Auth-ID: YOUR_AUTH_ID" \
+      -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "legs": "aleg",
+        "aleg_url": "https://example.com/transfer/aleg",
+        "aleg_method": "POST"
+      }'
+    ```
+
+    ```python Python
+    import requests
+
+    auth_id = "YOUR_AUTH_ID"
+    call_uuid = "ACTIVE_CALL_UUID"
+
+    url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/"
+    headers = {
+        "X-Auth-ID": auth_id,
+        "X-Auth-Token": "YOUR_AUTH_TOKEN",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "legs": "aleg",
+        "aleg_url": "https://example.com/transfer/aleg",
+        "aleg_method": "POST"
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    print(response.json())
+    ```
+
+    ```javascript Node.js
+    const axios = require("axios");
+
+    const authId = "YOUR_AUTH_ID";
+    const callUuid = "ACTIVE_CALL_UUID";
+
+    const response = await axios.post(
+      `https://api.vobiz.ai/api/v1/Account/${authId}/Call/${callUuid}/`,
+      {
+        legs: "aleg",
+        aleg_url: "https://example.com/transfer/aleg",
+        aleg_method: "POST"
+      },
+      {
+        headers: {
+          "X-Auth-ID": authId,
+          "X-Auth-Token": "YOUR_AUTH_TOKEN",
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    console.log(response.data);
+    ```
+
+    </CodeGroup>
+  </Tab>
+  <Tab title="Transfer both legs">
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X POST \
+      https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/ \
+      -H "X-Auth-ID: YOUR_AUTH_ID" \
+      -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "legs": "both",
+        "aleg_url": "https://example.com/transfer/aleg",
+        "aleg_method": "POST",
+        "bleg_url": "https://example.com/transfer/bleg",
+        "bleg_method": "POST"
+      }'
+    ```
+
+    ```python Python
+    import requests
+
+    auth_id = "YOUR_AUTH_ID"
+    call_uuid = "ACTIVE_CALL_UUID"
+
+    url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/"
+    headers = {
+        "X-Auth-ID": auth_id,
+        "X-Auth-Token": "YOUR_AUTH_TOKEN",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "legs": "both",
+        "aleg_url": "https://example.com/transfer/aleg",
+        "aleg_method": "POST",
+        "bleg_url": "https://example.com/transfer/bleg",
+        "bleg_method": "POST"
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    print(response.json())
+    ```
+
+    ```javascript Node.js
+    const axios = require("axios");
+
+    const authId = "YOUR_AUTH_ID";
+    const callUuid = "ACTIVE_CALL_UUID";
+
+    const response = await axios.post(
+      `https://api.vobiz.ai/api/v1/Account/${authId}/Call/${callUuid}/`,
+      {
+        legs: "both",
+        aleg_url: "https://example.com/transfer/aleg",
+        aleg_method: "POST",
+        bleg_url: "https://example.com/transfer/bleg",
+        bleg_method: "POST"
+      },
+      {
+        headers: {
+          "X-Auth-ID": authId,
+          "X-Auth-Token": "YOUR_AUTH_TOKEN",
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    console.log(response.data);
+    ```
+
+    </CodeGroup>
+  </Tab>
+</Tabs>
+
+## XML response example
+
+Your transfer URL should return Vobiz XML defining the next call instructions:
+
+```xml
+<Response>
+  <Speak>Please hold while we transfer your call.</Speak>
+  <Dial>
+    <Number>+14156667890</Number>
+  </Dial>
+</Response>
+```

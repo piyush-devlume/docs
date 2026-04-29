@@ -1,0 +1,159 @@
+---
+title: "Retrieve a Live Call: Real-Time Call Details"
+description: "GET live status and metrics for an in-progress call by UUID. Returns call state, active duration, and leg details — only available while the call is active."
+---
+
+Use this endpoint to retrieve real-time information about a call that is currently in progress. Unlike the standard call retrieval endpoint that returns finalized CDRs, this endpoint returns live data including the current call state, active duration, and leg details. Use it to build monitoring dashboards, verify call connectivity, or check state before performing operations such as transfer or hangup.
+
+```
+GET https://api.vobiz.ai/api/v1/account/{auth_id}/call/{call_uuid}/?status=live
+```
+
+<Note>
+  This endpoint only returns data for calls that are currently in progress. For completed calls, use the standard retrieve endpoint. If the UUID does not exist or the call has ended, you receive a 404 response.
+</Note>
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account Auth ID.
+</ParamField>
+
+<ParamField path="call_uuid" type="string" required>
+  Unique identifier of the live call to retrieve.
+</ParamField>
+
+## Query parameters
+
+<ParamField query="status" type="string" required>
+  Must be set to `live`. Without this parameter, the endpoint returns the finalized CDR if the call has ended.
+</ParamField>
+
+## Response
+
+A successful request returns HTTP `200 OK` with a `calls` array containing the live call object.
+
+```json
+{
+  "api_id": "c8b427f6-58ce-11e1-86da-adf28403fe48",
+  "calls": [
+    {
+      "answer_time": "2014-10-15 09:03:43",
+      "bill_duration": null,
+      "billed_duration": null,
+      "call_direction": "outbound",
+      "call_duration": 180,
+      "call_state": "ACTIVE",
+      "call_uuid": "97ceeb52-58b6-11e1-86da-77300b68f8bb",
+      "conference_uuid": null,
+      "end_time": null,
+      "from_number": "+14156667777",
+      "initiation_time": "2014-10-15 09:03:38",
+      "parent_call_uuid": null,
+      "hangup_cause_code": null,
+      "hangup_cause_name": null,
+      "hangup_source": null,
+      "resource_uri": "/v1/Account/MA2025RK4E639VJFZAGV/Call/97ceeb52-58b6-11e1-86da-77300b68f8bb/",
+      "to_number": "+14156667778",
+      "total_amount": null,
+      "total_rate": null,
+      "stir_verification": "verified",
+      "stir_attestation": "A",
+      "source_ip": "1.1.1.1"
+    }
+  ]
+}
+```
+
+### Live-call-specific fields
+
+<ResponseField name="call_state" type="string">
+  Current state of the call. Possible values:
+
+  - `RINGING` — Call is ringing, not yet answered.
+  - `EARLY` — Early media state (for example, ringback tone playing).
+  - `ACTIVE` — Call is connected and in progress.
+  - `HELD` — Call is on hold.
+</ResponseField>
+
+<ResponseField name="call_duration" type="integer">
+  Live call duration in seconds, measured from `answer_time`. Updates in real time.
+</ResponseField>
+
+<ResponseField name="end_time" type="string">
+  Always `null` for active calls. Populated only after the call ends.
+</ResponseField>
+
+<ResponseField name="billed_duration" type="integer">
+  Always `null` until the call ends and billing is finalized.
+</ResponseField>
+
+<ResponseField name="total_amount" type="string">
+  Always `null` until the call ends and billing is calculated.
+</ResponseField>
+
+<ResponseField name="hangup_cause_code" type="integer">
+  Always `null` for active calls.
+</ResponseField>
+
+<ResponseField name="hangup_cause_name" type="string">
+  Always `null` for active calls.
+</ResponseField>
+
+<ResponseField name="hangup_source" type="string">
+  Always `null` for active calls.
+</ResponseField>
+
+## Code examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/account/{auth_id}/call/{call_uuid}/?status=live" \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+call_uuid = "LIVE_CALL_UUID"
+
+url = f"https://api.vobiz.ai/api/v1/account/{auth_id}/call/{call_uuid}/"
+params = {"status": "live"}
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.get(url, params=params, headers=headers)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const callUuid = "LIVE_CALL_UUID";
+
+const response = await axios.get(
+  `https://api.vobiz.ai/api/v1/account/${authId}/call/${callUuid}/`,
+  {
+    params: { status: "live" },
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    }
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+<Tip>
+  Poll this endpoint periodically to monitor live call metrics. Multiply `call_duration` by `total_rate` to estimate the current call cost in real time.
+</Tip>

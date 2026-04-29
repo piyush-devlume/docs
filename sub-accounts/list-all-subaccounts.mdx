@@ -1,0 +1,163 @@
+---
+title: "List all sub-accounts under your master account"
+description: "Retrieve a paginated list of sub-accounts sorted by creation date, with optional filtering to return only currently active sub-accounts."
+sidebarTitle: "List sub-accounts"
+---
+
+Use this endpoint to retrieve all sub-accounts associated with your master account. Results are returned in reverse chronological order (most recently created first) and support pagination. Use the `active_only` filter to limit results to sub-accounts that are currently enabled.
+
+**GET** `https://api.vobiz.ai/api/v1/accounts/{auth_id}/sub-accounts/`
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your master account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+## Query parameters
+
+<ParamField query="page" type="integer">
+  Page number for pagination. Default: `1`.
+</ParamField>
+
+<ParamField query="size" type="integer">
+  Number of results per page. Default: `25`.
+</ParamField>
+
+<ParamField query="active_only" type="boolean">
+  Set to `true` to return only active sub-accounts. Inactive sub-accounts are excluded from the response.
+</ParamField>
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET 'https://api.vobiz.ai/api/v1/accounts/{auth_id}/sub-accounts/?page=1&size=25&active_only=true' \
+  -H 'X-Auth-ID: {auth_id}' \
+  -H 'X-Auth-Token: {auth_token}'
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+url = f"https://api.vobiz.ai/api/v1/accounts/{auth_id}/sub-accounts/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+params = {"page": 1, "size": 25, "active_only": True}
+
+response = requests.get(url, headers=headers, params=params)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const response = await axios.get(
+  `https://api.vobiz.ai/api/v1/accounts/${authId}/sub-accounts/`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    },
+    params: { page: 1, size: 25, active_only: true },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response fields
+
+<ResponseField name="sub_accounts" type="array">
+  Array of sub-account objects.
+
+  <Expandable title="Sub-account object fields">
+    <ResponseField name="id" type="string">
+      Unique identifier for the sub-account (e.g., `SA_67401KW8`).
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Name of the sub-account.
+    </ResponseField>
+    <ResponseField name="email" type="string">
+      Email address for the sub-account.
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Description of the sub-account purpose or usage.
+    </ResponseField>
+    <ResponseField name="permissions" type="object">
+      Permissions granted to this sub-account (e.g., `calls`, `cdr`).
+    </ResponseField>
+    <ResponseField name="rate_limit" type="integer">
+      API rate limit for this sub-account.
+    </ResponseField>
+    <ResponseField name="parent_auth_id" type="string">
+      Auth ID of the parent master account.
+    </ResponseField>
+    <ResponseField name="auth_id" type="string">
+      Authentication ID for this sub-account.
+    </ResponseField>
+    <ResponseField name="is_active" type="boolean">
+      Whether the sub-account is currently active.
+    </ResponseField>
+    <ResponseField name="created_at" type="string">
+      ISO 8601 timestamp of creation.
+    </ResponseField>
+    <ResponseField name="updated_at" type="string">
+      ISO 8601 timestamp of last update.
+    </ResponseField>
+    <ResponseField name="last_used" type="string">
+      ISO 8601 timestamp of the last API call. `null` if never used.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="total" type="integer">
+  Total number of sub-accounts matching the filter.
+</ResponseField>
+
+<ResponseField name="page" type="integer">
+  Current page number.
+</ResponseField>
+
+<ResponseField name="size" type="integer">
+  Number of results per page.
+</ResponseField>
+
+## Example response
+
+```json 200 OK
+{
+  "sub_accounts": [
+    {
+      "name": "Support Team",
+      "email": "support@example.com",
+      "phone": "+1234567890",
+      "description": "Support-facing voice workload",
+      "permissions": {
+        "calls": true,
+        "cdr": true
+      },
+      "rate_limit": 500,
+      "id": "SA_67401KW8",
+      "parent_auth_id": "MA_XXXXXX",
+      "auth_id": "inG9oUky5uFjdUECaQNzeyVYD6ommaJd",
+      "email_verified": true,
+      "enabled": true,
+      "is_active": true,
+      "created_at": "2025-10-22T03:57:35.997500Z",
+      "updated_at": "2025-10-22T03:57:35.997500Z",
+      "last_used": null
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "size": 25
+}
+```

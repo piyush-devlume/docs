@@ -1,0 +1,99 @@
+---
+title: "Release a phone number back to inventory"
+description: "Permanently remove a phone number from your Vobiz account and return it to the shared inventory pool. This action cannot be undone."
+sidebarTitle: "Unrent a number"
+---
+
+Use this endpoint to release a phone number from your account and return it to inventory. Once released, the number's `auth_id` and `trunk_group_id` are cleared and the number becomes available for other accounts to purchase. Any active calls or application configurations tied to this number will be immediately affected.
+
+**DELETE** `https://api.vobiz.ai/api/v1/account/{auth_id}/numbers/{e164_number}`
+
+<Warning>
+  Releasing a phone number is permanent and cannot be reversed. You will lose access to the number immediately and any related call routing will stop functioning.
+</Warning>
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+<ParamField path="e164_number" type="string" required>
+  The phone number to release in E.164 format (e.g., `+918071387149`). The number must be currently assigned to your account.
+</ParamField>
+
+No request body is required.
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE "https://api.vobiz.ai/api/v1/account/{AUTH_ID}/numbers/{PHONE_NUMBER}" \
+  -H "X-Auth-ID: {AUTH_ID}" \
+  -H "X-Auth-Token: {AUTH_TOKEN}"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+phone_number = "+918071387149"
+url = f"https://api.vobiz.ai/api/v1/account/{auth_id}/numbers/{phone_number}"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.delete(url, headers=headers)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const phoneNumber = "+918071387149";
+
+const response = await axios.delete(
+  `https://api.vobiz.ai/api/v1/account/${authId}/numbers/${encodeURIComponent(phoneNumber)}`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response fields
+
+<ResponseField name="message" type="string">
+  Confirmation message on success (e.g., `number returned to inventory`).
+</ResponseField>
+
+After a successful release, the following changes are applied to the number record:
+
+- `auth_id` is set to `null`
+- `trunk_group_id` is set to `null`
+- `released_at` timestamp is set to the current time
+- The number becomes available in inventory for purchase by any account
+
+## Example response
+
+```json 200 OK
+{
+  "message": "number returned to inventory"
+}
+```
+
+```json 403 Forbidden
+{
+  "error": "forbidden",
+  "message": "account does not own this number"
+}
+```

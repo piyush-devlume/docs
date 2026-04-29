@@ -1,0 +1,132 @@
+---
+title: "The Vobiz Recording object reference"
+description: "Complete field reference for the Recording object, including file metadata, call details, timing attributes, and storage billing fields."
+sidebarTitle: "Recording object"
+---
+
+The Recording object represents a call or conference recording stored in your Vobiz account. It contains information about the audio file, the associated call, storage duration, and billing details. Recordings are returned by the List All Recordings and Retrieve Recording endpoints.
+
+<Note>
+  Vobiz automatically rounds recording durations to the nearest 60-second interval. Recordings shorter than 60 seconds are billed as 60 seconds. The `rounded_recording_duration` field reflects this billing-adjusted value.
+</Note>
+
+## Core attributes
+
+<ResponseField name="recording_id" type="string">
+  Unique identifier for the recording. Use this in all recording API operations to identify a specific recording.
+</ResponseField>
+
+<ResponseField name="recording_url" type="string">
+  Direct HTTPS URL to download or stream the audio file. Requires authentication headers when accessed programmatically.
+</ResponseField>
+
+<ResponseField name="recording_format" type="string">
+  Audio format of the recording file. Values: `mp3`, `wav`.
+</ResponseField>
+
+<ResponseField name="call_uuid" type="string">
+  UUID of the call or conference that was recorded.
+</ResponseField>
+
+<ResponseField name="conference_name" type="string">
+  Name of the conference that was recorded. `null` for regular call recordings.
+</ResponseField>
+
+<ResponseField name="recording_type" type="string">
+  Type of recording. Values: `call` (regular call), `conference` (conference call).
+</ResponseField>
+
+<ResponseField name="add_time" type="string">
+  ISO 8601 timestamp when the recording was created.
+</ResponseField>
+
+## Duration and timing attributes
+
+<ResponseField name="recording_start_ms" type="float">
+  Recording start time in milliseconds since Unix epoch.
+</ResponseField>
+
+<ResponseField name="recording_end_ms" type="float">
+  Recording end time in milliseconds since Unix epoch.
+</ResponseField>
+
+<ResponseField name="recording_duration_ms" type="float">
+  Actual duration of the recording in milliseconds.
+</ResponseField>
+
+<ResponseField name="rounded_recording_duration" type="integer">
+  Rounded duration in seconds used for billing calculations. Minimum value is `60`.
+</ResponseField>
+
+## Call details
+
+<ResponseField name="from_number" type="string">
+  Caller phone number in E.164 format (e.g., `+14155551234`).
+</ResponseField>
+
+<ResponseField name="to_number" type="string">
+  Destination phone number in E.164 format.
+</ResponseField>
+
+## Storage and billing attributes
+
+<ResponseField name="recording_storage_duration" type="integer">
+  Number of days since the recording was created. Used to calculate storage costs.
+</ResponseField>
+
+<ResponseField name="recording_storage_rate" type="float">
+  Storage rate per month in USD. This is the unit cost for storing this recording.
+</ResponseField>
+
+<ResponseField name="monthly_recording_storage_amount" type="float">
+  Monthly storage cost in USD for the current billing cycle.
+</ResponseField>
+
+<ResponseField name="resource_uri" type="string">
+  API resource URI for this recording.
+</ResponseField>
+
+## Example object
+
+```json
+{
+  "api_id": "668470b7-7a8f-49b6-9011-50075754a50a",
+  "meta": {
+    "limit": 20,
+    "next": null,
+    "offset": 0,
+    "previous": null,
+    "total_count": 1
+  },
+  "objects": [
+    {
+      "add_time": "2025-11-06 13:49:10.751756+00:00",
+      "call_uuid": "6e558798-499c-4a68-bc77-46f2c53d1f69",
+      "conference_name": null,
+      "from_number": "+918071387423",
+      "monthly_recording_storage_amount": 0,
+      "recording_duration_ms": "10080.00000",
+      "recording_end_ms": "1762436949502.00000",
+      "recording_format": "mp3",
+      "recording_id": "d7801b2e-e76d-4dd8-be9c-9e015a7267b8",
+      "recording_start_ms": "1762436939422.00000",
+      "recording_storage_duration": 1,
+      "recording_storage_rate": 0.005,
+      "recording_type": "call",
+      "recording_url": "https://media.vobiz.ai/api/v1/Account/MA_PU0XU668/Recording/d7801b2e-e76d-4dd8-be9c-9e015a7267b8.mp3",
+      "resource_uri": "/v1/Account/MA_PU0XU668/Recording/d7801b2e-e76d-4dd8-be9c-9e015a7267b8/",
+      "rounded_recording_duration": 60,
+      "to_number": "919624705678"
+    }
+  ]
+}
+```
+
+| Field | Regular call | Conference recording |
+|-------|-------------|---------------------|
+| `conference_name` | `null` | Conference name string |
+| `recording_type` | `"call"` | `"conference"` |
+
+<Warning>
+  Recording URLs may be temporary. Download recordings to your own storage for permanent retention. The `recording_storage_duration` field increments daily and directly affects your monthly storage costs.
+</Warning>

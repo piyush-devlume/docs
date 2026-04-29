@@ -1,0 +1,160 @@
+---
+title: "Vobiz Node.js SDK — installation and usage"
+description: "Install and use the Vobiz Node.js SDK. Make calls, manage trunks, stream audio, query CDRs, manage conferences, and verify webhook signatures in JavaScript."
+sidebarTitle: "Node.js SDK"
+---
+
+The official Vobiz Node.js SDK lets you interact with the Vobiz Voice API from JavaScript or TypeScript. Use it to make outbound calls, manage SIP trunks, handle call detail records, control live calls, manage conferences, and verify webhook signatures—all without writing raw HTTP requests.
+
+**Source code:** [vobiz-ai/Vobiz-Node-SDK](https://github.com/vobiz-ai/Vobiz-Node-SDK)
+
+## Installation
+
+Clone the repository and install dependencies:
+
+```bash
+git clone https://github.com/vobiz-ai/Vobiz-Node-SDK.git
+cd Vobiz-Node-SDK
+npm install
+```
+
+## Authentication
+
+All API calls require your **Auth ID** and **Auth Token** from the [Vobiz Console](https://console.vobiz.ai).
+
+<Tabs>
+  <Tab title="Explicit credentials">
+    ```javascript
+    const { Client } = require('vobiz-node');
+
+    const client = new Client('YOUR_AUTH_ID', 'YOUR_AUTH_TOKEN');
+    ```
+  </Tab>
+  <Tab title="Environment variables">
+    ```bash
+    export VOBIZ_AUTH_ID=YOUR_AUTH_ID
+    export VOBIZ_AUTH_TOKEN=YOUR_AUTH_TOKEN
+    ```
+
+    ```javascript
+    const { Client } = require('vobiz-node');
+
+    const client = new Client(); // Reads variables automatically
+    ```
+  </Tab>
+</Tabs>
+
+## Quick start: make an outbound call
+
+```javascript
+const { Client } = require('vobiz-node');
+
+const client = new Client(process.env.VOBIZ_AUTH_ID, process.env.VOBIZ_AUTH_TOKEN);
+
+client.calls.create(
+  '+911171366914',                   // Source caller ID (your Vobiz DID)
+  '+919148227303',                   // Destination number
+  'https://yourserver.com/answer',   // Webhook URL returning VobizXML
+  { hangupUrl: 'https://yourserver.com/hangup' }
+).then(res => {
+  console.log('Call queued with UUID:', res.requestUuid);
+}).catch(console.error);
+```
+
+When the destination answers, Vobiz sends a POST to your `answer` URL. Your server must respond with valid VobizXML.
+
+## Live call control
+
+Manipulate active calls in real time:
+
+```javascript
+// Hang up a live call
+client.calls.hangup(callUuid);
+
+// Transfer to another call leg
+client.calls.transfer(callUuid, { legs: 'aleg', alegUrl: 'https://...' });
+
+// Play audio file on a live call
+client.calls.playMusic(callUuid, ['https://example.com/audio.mp3']);
+
+// Speak text-to-speech on a live call
+client.calls.speakText(callUuid, 'Hello from Vobiz', { voice: 'WOMAN', language: 'en-US' });
+
+// Send DTMF digits
+client.calls.sendDigits(callUuid, '1234');
+
+// Stream audio to a WebSocket agent
+client.calls.stream(callUuid, 'wss://your-agent.com', { audioTrack: 'inbound' });
+```
+
+## Call detail records
+
+Retrieve historical call records with optional filters:
+
+```javascript
+client.cdr.get({
+  limit: 20,
+  offset: 0,
+  startTime: '2026-01-01T00:00:00Z',
+  callDirection: 'outbound'
+}).then(history => {
+  console.log(`Fetched ${history.length} records`);
+});
+```
+
+## Conferences
+
+```javascript
+client.conferences.get('sales-channel').then(conference => {
+  conference.kickMember(memberId);
+  conference.muteMember(memberId);
+  conference.playAudioToMember(memberId, 'https://example.com/chime.mp3');
+  conference.record({ fileFormat: 'mp3', transcriptionType: 'auto' });
+});
+```
+
+## VobizXML webhook handler
+
+When a call connects, Vobiz calls your `answer_url`. Return VobizXML to control call behavior:
+
+```javascript
+app.post('/answer', (req, res) => {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Speak voice="WOMAN" language="en-US">Thank you for calling.</Speak>
+</Response>`;
+
+  res.type('text/xml').send(xml);
+});
+```
+
+## Webhook signature verification
+
+Verify that incoming webhook requests originated from Vobiz before processing them:
+
+```javascript
+const { validateSignature } = require('vobiz-node');
+
+app.post('/webhook', (req, res) => {
+  const isValid = validateSignature(
+    req.url,
+    req.headers['x-vobiz-signature'],
+    req.body,
+    process.env.VOBIZ_AUTH_TOKEN
+  );
+
+  if (!isValid) return res.status(401).send('Unauthorized payload');
+
+  // Process the verified webhook event
+});
+```
+
+<Tip>
+Always verify webhook signatures in production to prevent spoofed requests. The `validateSignature` helper handles the HMAC-SHA256 computation for you.
+</Tip>
+
+## Next steps
+
+- See the [Python SDK](/integrations/python-sdk) for equivalent examples in Python.
+- Use [VobizXML with the IVR example](/examples/vobiz-ivr-xml-python) to build multi-level call menus.
+- See the [WebSockets guide](/integrations/websockets) to stream live audio to an AI agent.

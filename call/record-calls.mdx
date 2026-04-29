@@ -1,0 +1,217 @@
+---
+title: "Record Calls: Start, Stop, and Transcribe"
+description: "Start and stop call recordings in MP3 or WAV, create multiple recordings per call, enable auto-transcription, and receive webhook callbacks on completion."
+---
+
+The record endpoint lets you start and stop recordings at any point during an active call. You can create multiple separate recordings on the same call, choose between MP3 and WAV formats, configure stereo channel separation, and enable automated transcription — all with HTTP callbacks when each recording is ready.
+
+<Warning>
+  Always comply with local laws on call recording consent. Many jurisdictions require you to inform all participants that the call is being recorded before you start.
+</Warning>
+
+## Start a recording
+
+```
+POST https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Record/
+```
+
+### Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account Auth ID.
+</ParamField>
+
+<ParamField path="call_uuid" type="string" required>
+  Unique identifier of the active call to record.
+</ParamField>
+
+### Request parameters
+
+<ParamField body="time_limit" type="integer" default="60">
+  Maximum recording duration in seconds. Adjust based on your use case to control file size and storage costs.
+</ParamField>
+
+<ParamField body="file_format" type="string" default="mp3">
+  Audio format for the recording. Accepted values: `mp3`, `wav`. MP3 is recommended for most use cases — files are significantly smaller than WAV.
+</ParamField>
+
+<ParamField body="transcription_type" type="string">
+  Enable automatic transcription. Set to `auto` for automated transcription with results in under 5 minutes.
+</ParamField>
+
+<ParamField body="transcription_url" type="string">
+  Callback URL invoked when transcription completes. Receives the transcript text.
+</ParamField>
+
+<ParamField body="transcription_method" type="string" default="POST">
+  HTTP method for `transcription_url`. Accepted values: `GET`, `POST`.
+</ParamField>
+
+<ParamField body="callback_url" type="string">
+  URL called when the recording file is available. Receives the recording URL and metadata.
+</ParamField>
+
+<ParamField body="callback_method" type="string" default="POST">
+  HTTP method for `callback_url`. Accepted values: `GET`, `POST`.
+</ParamField>
+
+<ParamField body="stereo" type="boolean" default="false">
+  When `true`, records in stereo with the caller on the left channel and the callee on the right channel. Useful for multi-party call analysis.
+</ParamField>
+
+## Stop a recording
+
+```
+DELETE https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Record/
+```
+
+Send a `DELETE` request to stop the active recording. To stop a specific recording when multiple recordings are in progress, include the `URL` body parameter with the recording's URL.
+
+### Request parameters
+
+<ParamField body="URL" type="string">
+  URL of the specific recording to stop. Omit to stop all active recordings on the call.
+</ParamField>
+
+## Code examples
+
+<Tabs>
+  <Tab title="Start recording">
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X POST \
+      https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Record/ \
+      -H "X-Auth-ID: YOUR_AUTH_ID" \
+      -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "time_limit": 3600,
+        "file_format": "mp3",
+        "transcription_type": "auto",
+        "transcription_url": "https://example.com/transcription",
+        "callback_url": "https://example.com/recording-ready",
+        "stereo": false
+      }'
+    ```
+
+    ```python Python
+    import requests
+
+    auth_id = "YOUR_AUTH_ID"
+    call_uuid = "ACTIVE_CALL_UUID"
+
+    url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Record/"
+    headers = {
+        "X-Auth-ID": auth_id,
+        "X-Auth-Token": "YOUR_AUTH_TOKEN",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "time_limit": 3600,
+        "file_format": "mp3",
+        "transcription_type": "auto",
+        "transcription_url": "https://example.com/transcription",
+        "callback_url": "https://example.com/recording-ready",
+        "stereo": False
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    print(response.json())
+    ```
+
+    ```javascript Node.js
+    const axios = require("axios");
+
+    const authId = "YOUR_AUTH_ID";
+    const callUuid = "ACTIVE_CALL_UUID";
+
+    const response = await axios.post(
+      `https://api.vobiz.ai/api/v1/Account/${authId}/Call/${callUuid}/Record/`,
+      {
+        time_limit: 3600,
+        file_format: "mp3",
+        transcription_type: "auto",
+        transcription_url: "https://example.com/transcription",
+        callback_url: "https://example.com/recording-ready",
+        stereo: false
+      },
+      {
+        headers: {
+          "X-Auth-ID": authId,
+          "X-Auth-Token": "YOUR_AUTH_TOKEN",
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    console.log(response.data);
+    ```
+
+    </CodeGroup>
+  </Tab>
+  <Tab title="Stop recording">
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X DELETE \
+      https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Record/ \
+      -H "X-Auth-ID: YOUR_AUTH_ID" \
+      -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+    ```
+
+    ```python Python
+    import requests
+
+    auth_id = "YOUR_AUTH_ID"
+    call_uuid = "ACTIVE_CALL_UUID"
+
+    url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Record/"
+    headers = {
+        "X-Auth-ID": auth_id,
+        "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    }
+
+    response = requests.delete(url, headers=headers)
+    print(response.status_code)
+    ```
+
+    ```javascript Node.js
+    const axios = require("axios");
+
+    const authId = "YOUR_AUTH_ID";
+    const callUuid = "ACTIVE_CALL_UUID";
+
+    await axios.delete(
+      `https://api.vobiz.ai/api/v1/Account/${authId}/Call/${callUuid}/Record/`,
+      {
+        headers: {
+          "X-Auth-ID": authId,
+          "X-Auth-Token": "YOUR_AUTH_TOKEN"
+        }
+      }
+    );
+
+    console.log("Recording stopped.");
+    ```
+
+    </CodeGroup>
+  </Tab>
+</Tabs>
+
+## Best practices
+
+<AccordionGroup>
+  <Accordion title="Use MP3 for efficiency">
+    MP3 files are significantly smaller than WAV files. Use MP3 unless you specifically need uncompressed audio for post-processing.
+  </Accordion>
+  <Accordion title="Set appropriate time limits">
+    Configure `time_limit` based on your expected call duration to prevent unexpectedly large files. The default is 60 seconds — increase it for longer calls.
+  </Accordion>
+  <Accordion title="Transcription limitations">
+    Automatic transcription supports English calls with a duration between 500ms and 4 hours, and a file size under 2GB. Factor these constraints into your application design.
+  </Accordion>
+  <Accordion title="Use stereo for multi-party calls">
+    Enable `stereo: true` to separate the caller and callee into distinct channels. This makes post-call analysis and transcription significantly easier.
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,200 @@
+---
+title: "WhatsApp Webhooks: Real-time Event Delivery"
+description: "Configure webhooks to receive real-time WhatsApp events, verify HMAC signatures, and handle delivery retries for reliable integrations."
+sidebarTitle: "Webhooks"
+---
+
+Webhooks let Vobiz push WhatsApp events to your application the instant they happen — no polling required. When a customer sends a message, a delivery status changes, or a campaign finishes, Vobiz makes an HTTP POST request to your configured endpoint with the full event payload.
+
+## How webhooks work
+
+<Steps>
+  <Step title="An event occurs">
+    A customer sends a message, a message is delivered to their device, or another tracked event takes place in your WhatsApp channel.
+  </Step>
+  <Step title="Vobiz sends a request">
+    Vobiz immediately makes an HTTPS POST request to your webhook URL with a JSON payload describing the event.
+  </Step>
+  <Step title="Your server processes the event">
+    Your application receives the request, verifies the HMAC signature, and processes the event data.
+  </Step>
+  <Step title="Your server responds">
+    Return HTTP `200` within five seconds to acknowledge receipt. If Vobiz does not receive a `200`, it retries the delivery.
+  </Step>
+</Steps>
+
+---
+
+## Available events
+
+You can subscribe to any combination of the following events:
+
+| Event | Description |
+| --- | --- |
+| `message.received` | A customer sent a message to your channel |
+| `message.sent` | A message from your business was accepted by WhatsApp's servers |
+| `message.delivered` | A sent message reached the recipient's device |
+| `message.read` | The recipient opened your message (requires read receipts to be enabled) |
+| `message.failed` | A message failed to send, with error details |
+| `contact.updated` | A contact was created or updated in Vobiz |
+| `campaign.completed` | A campaign finished sending all messages |
+
+See the [Webhook events reference](/whatsapp/webhooks/events) for full payload structures and example data for each event type.
+
+---
+
+## Configuring a webhook
+
+<Steps>
+  <Step title="Create a webhook endpoint">
+    Add a route to your server that accepts POST requests and returns HTTP `200`. The endpoint must be reachable from the internet over HTTPS.
+
+    ```javascript
+    app.post("/webhooks/vobiz", (req, res) => {
+      const signature = req.headers["x-vobiz-signature"];
+      if (!verifySignature(req.body, signature, process.env.WEBHOOK_SECRET)) {
+        return res.status(401).send("Invalid signature");
+      }
+      // Process req.body asynchronously
+      processEvent(req.body);
+      res.status(200).send("OK");
+    });
+    ```
+
+    <Tip>
+      During local development, use a tunneling tool to expose your local server at a public HTTPS URL, then update the webhook URL in Vobiz once you deploy.
+    </Tip>
+  </Step>
+  <Step title="Register the webhook in Vobiz">
+    1. Go to **Messaging → Webhooks** in the [Vobiz Console](https://console.vobiz.ai).
+    2. Click **Create Webhook**.
+    3. Enter your publicly accessible HTTPS URL.
+    4. Select the events you want to receive.
+    5. Copy the **signing secret** shown on screen — you'll use this to verify incoming requests.
+    6. Click **Save**.
+  </Step>
+  <Step title="Verify the signing secret">
+    Store the signing secret as an environment variable on your server. Use it to validate every incoming request as described in the [Signature verification](#signature-verification) section below.
+  </Step>
+</Steps>
+
+---
+
+## Signature verification
+
+Every webhook request from Vobiz includes an `X-Vobiz-Signature` header containing an HMAC-SHA256 signature of the raw request body, computed using your signing secret.
+
+Verify this signature on every request before processing any event data.
+
+<CodeGroup>
+
+```javascript Node.js
+const crypto = require("crypto");
+
+function verifySignature(rawBody, signature, secret) {
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expected)
+  );
+}
+```
+
+```python Python
+import hmac
+import hashlib
+
+def verify_signature(raw_body: bytes, signature: str, secret: str) -> bool:
+    expected = hmac.new(
+        secret.encode(),
+        raw_body,
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(signature, expected)
+```
+
+</CodeGroup>
+
+<Warning>
+  Always verify the HMAC signature before processing webhook data. Skipping this step lets anyone send fake events to your endpoint.
+</Warning>
+
+**How it works:**
+
+1. Vobiz computes `HMAC-SHA256(raw_body, your_secret)` and puts the hex digest in `X-Vobiz-Signature`.
+2. Your server computes the same digest using the same secret.
+3. If the two values match, the request is authentic. If not, reject it with HTTP `401`.
+
+Use a timing-safe comparison function (like `crypto.timingSafeEqual` or `hmac.compare_digest`) to prevent timing attacks.
+
+---
+
+## Retry behavior
+
+If your endpoint returns a non-`200` status or doesn't respond within five seconds, Vobiz retries the delivery with exponential backoff for up to 24 hours.
+
+To avoid receiving duplicate events during retries, use the `event_id` field in each payload to deduplicate events before processing:
+
+```javascript
+const processedEvents = new Set();
+
+app.post("/webhooks/vobiz", (req, res) => {
+  const { event_id } = req.body;
+  if (processedEvents.has(event_id)) {
+    return res.status(200).send("Already processed");
+  }
+  processedEvents.add(event_id);
+  processEvent(req.body);
+  res.status(200).send("OK");
+});
+```
+
+<Note>
+  In production, store processed event IDs in a persistent store (database, cache) rather than in memory so deduplication survives server restarts.
+</Note>
+
+---
+
+## Additional security measures
+
+### HTTPS only
+
+Webhook URLs must use HTTPS. Vobiz does not deliver events to HTTP endpoints.
+
+### IP whitelisting
+
+You can optionally restrict your endpoint to only accept requests from Vobiz's IP addresses for an extra layer of defense. Contact support to get the current list of Vobiz egress IPs.
+
+### Secret key rotation
+
+Rotate your webhook signing secret at any time from the Webhooks settings page. Update your server's environment variable to match before the old secret expires.
+
+---
+
+## Best practices
+
+**Respond within five seconds.** Return HTTP `200` immediately and process the event asynchronously using a background job queue. Long synchronous processing causes timeouts and unnecessary retries.
+
+**Deduplicate by event ID.** Use the `event_id` field to detect and discard duplicate deliveries. Store processed IDs in a database for persistence across restarts.
+
+**Filter to only the events you need.** Subscribe only to events your application actually uses. This keeps webhook volume low and makes your handler easier to reason about.
+
+**Monitor delivery logs.** Check the webhook delivery logs in the Vobiz console regularly. Failed deliveries indicate endpoint issues that need attention.
+
+**Never perform blocking operations in the handler.** Database writes, outbound API calls, and email sending should all happen asynchronously. Your handler should do nothing more than validate the signature, enqueue the event, and return `200`.
+
+---
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Webhook events reference" href="/whatsapp/webhooks/events">
+    Complete payload structures and example data for every webhook event type.
+  </Card>
+  <Card title="Send Message API" href="/whatsapp/api/send-message">
+    Send replies and proactive messages programmatically in response to webhook events.
+  </Card>
+</CardGroup>

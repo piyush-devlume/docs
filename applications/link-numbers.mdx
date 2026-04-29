@@ -1,0 +1,172 @@
+---
+title: "Link or unlink phone numbers to a Vobiz application"
+description: "Attach or detach a phone number from a Vobiz application. Attached numbers route inbound calls to the answer URL. Numbers must be in E.164 format."
+sidebarTitle: "Link numbers"
+---
+
+Use these endpoints to manage the association between phone numbers and applications. Attaching a number to an application means Vobiz will use that application's webhook URLs to handle incoming calls on that number. Detaching removes the association, leaving the number without an application.
+
+<Note>
+  Phone numbers must be URL-encoded in the path. Encode the `+` symbol as `%2B` (e.g., `+1234567890` becomes `%2B1234567890`).
+</Note>
+
+---
+
+## Attach a number to an application
+
+**POST** `https://api.vobiz.ai/api/v1/account/{authID}/numbers/{number}/application`
+
+### Path parameters
+
+<ParamField path="authID" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+<ParamField path="number" type="string" required>
+  The E.164 formatted phone number, URL-encoded (e.g., `%2B1234567890`).
+</ParamField>
+
+### Body parameters
+
+<ParamField body="application_id" type="string" required>
+  The ID of the application to link to this number.
+</ParamField>
+
+### Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST "https://api.vobiz.ai/api/v1/account/{Auth_ID}/numbers/%2B1234567890/application" \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "application_id": "12345678"
+  }'
+```
+
+```python Python
+import requests
+from urllib.parse import quote
+
+auth_id = "YOUR_AUTH_ID"
+number = quote("+1234567890", safe="")
+url = f"https://api.vobiz.ai/api/v1/account/{auth_id}/numbers/{number}/application"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+payload = {"application_id": "12345678"}
+
+response = requests.post(url, headers=headers, json=payload)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const number = encodeURIComponent("+1234567890");
+
+const response = await axios.post(
+  `https://api.vobiz.ai/api/v1/account/${authId}/numbers/${number}/application`,
+  { application_id: "12345678" },
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json",
+    },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+### Response
+
+```json 200 OK
+{
+  "message": "Number linked successfully",
+  "number": "+1234567890",
+  "application_id": "12345678"
+}
+```
+
+---
+
+## Detach a number from an application
+
+**DELETE** `https://api.vobiz.ai/api/v1/account/{authID}/numbers/{number}/application`
+
+### Path parameters
+
+<ParamField path="authID" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+<ParamField path="number" type="string" required>
+  The E.164 formatted phone number to detach, URL-encoded (e.g., `%2B1234567890`).
+</ParamField>
+
+No request body is required.
+
+### Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE "https://api.vobiz.ai/api/v1/account/{Auth_ID}/numbers/%2B1234567890/application" \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+from urllib.parse import quote
+
+auth_id = "YOUR_AUTH_ID"
+number = quote("+1234567890", safe="")
+url = f"https://api.vobiz.ai/api/v1/account/{auth_id}/numbers/{number}/application"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.delete(url, headers=headers)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const number = encodeURIComponent("+1234567890");
+
+const response = await axios.delete(
+  `https://api.vobiz.ai/api/v1/account/${authId}/numbers/${number}/application`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+### Response
+
+```json 200 OK
+{
+  "message": "Number detached successfully",
+  "number": "+1234567890"
+}
+```

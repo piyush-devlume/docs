@@ -1,0 +1,257 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "luma",
+  "name": "Vobiz",
+  "logo": {
+    "light": "https://media.brand.dev/ce060d5e-e497-4dad-bac3-dd15b43e9858.svg",
+    "dark": "https://media.brand.dev/ce060d5e-e497-4dad-bac3-dd15b43e9858.svg"
+  },
+  "colors": {
+    "primary": "#eb3c04",
+    "light": "#140404"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/vobiz"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quick-start",
+              "concepts/overview"
+            ]
+          },
+          {
+            "group": "Voice & Calls",
+            "pages": [
+              "call/overview",
+              "call/make-call",
+              "call/transfer-call",
+              "call/record-calls",
+              "call/machine-detection",
+              "call/dtmf"
+            ]
+          },
+          {
+            "group": "SIP & Trunking",
+            "pages": [
+              "trunks/overview",
+              "trunks/credentials",
+              "trunks/ip-acl",
+              "trunks/origination-uri",
+              "endpoint/overview"
+            ]
+          },
+          {
+            "group": "Voice XML",
+            "pages": [
+              "xml/overview",
+              "xml/stream",
+              "xml/speak",
+              "xml/gather",
+              "xml/dial",
+              "xml/record",
+              "xml/conference",
+              "xml-builder"
+            ]
+          },
+          {
+            "group": "Messaging",
+            "pages": [
+              "whatsapp/getting-started/prerequisites",
+              "whatsapp/getting-started/quick-start",
+              "whatsapp/channels",
+              "whatsapp/channels/byon",
+              "whatsapp/messaging",
+              "whatsapp/webhooks"
+            ]
+          },
+          {
+            "group": "Guides & Examples",
+            "pages": [
+              "guides/ai-voice-agent",
+              "examples/livekit-vobiz-outbound",
+              "examples/livekit-vobiz-inbound",
+              "examples/vobiz-ivr-xml-python",
+              "best-practices"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "concepts/callbacks",
+              "concepts/sip-trunking",
+              "concepts/streaming-websockets",
+              "cdr",
+              "errors",
+              "faq"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Account",
+            "pages": [
+              "account/retrieve-account",
+              "account-phone-number/list-account-phone-numbers",
+              "account-phone-number/purchase-from-inventory",
+              "account-phone-number/unrent-number",
+              "sub-accounts/create-subaccount",
+              "sub-accounts/list-all-subaccounts",
+              "sub-accounts/retrieve-subaccount",
+              "sub-accounts/update-subaccount",
+              "sub-accounts/delete-subaccount"
+            ]
+          },
+          {
+            "group": "Calls",
+            "pages": [
+              "call/call-object",
+              "call/make-call",
+              "call/hangup-call",
+              "call/transfer-call",
+              "call/retrieve-live-call",
+              "call/retrieve-all-live-calls",
+              "call/record-calls",
+              "call/play-audio",
+              "call/speak-text",
+              "call/dtmf/send-digits"
+            ]
+          },
+          {
+            "group": "Applications",
+            "pages": [
+              "applications/application-object",
+              "applications/create-application",
+              "applications/retrieve-application",
+              "applications/list-all-applications",
+              "applications/update-application",
+              "applications/delete-application",
+              "applications/link-numbers"
+            ]
+          },
+          {
+            "group": "Conferences",
+            "pages": [
+              "conference/conference-object",
+              "conference/retrieve-conference",
+              "conference/retrieve-all-conferences",
+              "conference/members",
+              "conference/recording",
+              "conference/hang-up-conference"
+            ]
+          },
+          {
+            "group": "Recordings",
+            "pages": [
+              "recording/recording-object",
+              "recording/list-all-recordings",
+              "recording/retrieve-recording",
+              "recording/download-recording",
+              "recording/delete-recording",
+              "recording/export-historical-recordings"
+            ]
+          },
+          {
+            "group": "SIP Trunks",
+            "pages": [
+              "trunks/trunk-object",
+              "trunks/create-trunk",
+              "trunks/retrieve-trunk",
+              "trunks/retrieve-all-trunks",
+              "trunks/update-trunk",
+              "trunks/delete-trunk",
+              "trunks/assign-number",
+              "trunks/unassign-number"
+            ]
+          },
+          {
+            "group": "Audio Streams",
+            "pages": [
+              "audio-streams/stream-object",
+              "audio-streams/start-audio-stream",
+              "audio-streams/stop-audio-stream",
+              "audio-streams/list-audio-streams",
+              "audio-streams/retrieve-audio-stream"
+            ]
+          },
+          {
+            "group": "WhatsApp",
+            "pages": [
+              "whatsapp/api/send-message",
+              "whatsapp/webhooks/events"
+            ]
+          },
+          {
+            "group": "Partner API",
+            "pages": [
+              "partner/api/authentication",
+              "partner/api/customers",
+              "partner/api/balance",
+              "partner/api/numbers",
+              "partner/api/cdrs",
+              "partner/api/transactions",
+              "partner/api/analytics"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Integrations",
+        "groups": [
+          {
+            "group": "AI Voice Platforms",
+            "pages": [
+              "integrations/vapi-dashboard",
+              "integrations/retellai-dashboard",
+              "integrations/elevenlabs-dashboard",
+              "integrations/livekit",
+              "integrations/pipecat",
+              "integrations/bolna",
+              "integrations/ultravox",
+              "integrations/openai-realtime"
+            ]
+          },
+          {
+            "group": "SDKs",
+            "pages": [
+              "integrations/node-sdk",
+              "integrations/python-sdk",
+              "integrations/ruby-sdk",
+              "integrations/go-sdk",
+              "integrations/csharp-sdk"
+            ]
+          },
+          {
+            "group": "WebRTC & WebSockets",
+            "pages": [
+              "integrations/webrtc-application-setup",
+              "integrations/websockets"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "appearance": {
+    "default": "system"
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/orgs/vobiz-ai/repositories",
+      "linkedin": "https://www.linkedin.com/company/vobizai",
+      "x": "https://x.com/vobiz_ai"
+    }
+  }
+}

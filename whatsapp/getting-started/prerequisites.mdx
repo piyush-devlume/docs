@@ -1,0 +1,66 @@
+---
+title: "WhatsApp Business on Vobiz: Prerequisites"
+sidebarTitle: "Prerequisites"
+description: "What you need before connecting WhatsApp Business to Vobiz: Meta Business Account, WABA, a verified phone number, and an active Vobiz account."
+---
+
+Before you can send or receive WhatsApp messages through Vobiz, you need a few things set up on the Meta side. This page walks through each requirement so you're ready for the quick-start guide.
+
+<Info>
+  Setup typically takes **15–30 minutes** if you're starting from scratch. If you already have a Meta Business Account, it's much faster.
+</Info>
+
+## 1. Meta Business Account
+
+A Meta Business Account gives you access to WhatsApp Business API (and other Meta business tools). It's free to create.
+
+<Steps>
+  <Step title="Go to business.facebook.com">
+    Log in with your personal Facebook account. You'll need this to manage a Business Account.
+  </Step>
+  <Step title="Create your business">
+    Click **Create Account** in the top right and enter your business name and details. Use your official business name — Meta requires it for verification.
+  </Step>
+  <Step title="Complete verification">
+    For production use and higher message limits, Meta requires business verification (typically 1–3 business days). You can start testing while awaiting approval.
+  </Step>
+</Steps>
+
+## 2. WhatsApp Business Account (WABA)
+
+Within Meta Business Manager, create a WhatsApp Business Account (WABA):
+
+1. Go to **Accounts → WhatsApp Accounts** in Meta Business Manager.
+2. Click **Add → Create a WhatsApp Business Account**.
+3. Follow the wizard to create the WABA.
+4. **Save your WABA ID** — find it under WhatsApp Manager → Settings → Business Info (format: `123456789012345`).
+
+## 3. Phone number
+
+Your phone number must meet these requirements:
+
+- Can receive voice calls or SMS (used for OTP verification)
+- **Not** currently registered with WhatsApp or WhatsApp Business app — deregister it first if needed
+- In a country supported by Meta's WhatsApp Business API
+
+<Tabs>
+  <Tab title="Bring Your Own Number (BYON)">
+    Use an existing number you own. Free, but requires OTP verification and takes 5–10 minutes. See the [BYON setup guide](/whatsapp/channels/byon) for full instructions.
+  </Tab>
+  <Tab title="Buy from Vobiz">
+    Purchase a WhatsApp-capable number directly from Vobiz. Instant setup, no verification needed, but a monthly fee applies. Choose from available countries in the console.
+  </Tab>
+</Tabs>
+
+## 4. Vobiz account
+
+You need an active Vobiz account with:
+
+- **Auth ID and Auth Token** — available in the Vobiz console under **Settings → API Credentials** (needed for API calls)
+- **Sufficient balance** — WhatsApp conversations are billed per session; add credits before going live
+
+Sign up at [console.vobiz.ai](https://console.vobiz.ai) if you don't have an account.
+
+## Ready?
+
+Once these are in place, follow the [Quick Start guide](/whatsapp/getting-started/quick-start) to connect your first channel and send a message.

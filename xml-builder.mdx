@@ -1,0 +1,128 @@
+---
+title: "XML Builder: Generate Vobiz XML Without Writing Code"
+description: "The interactive XML Builder generates valid Vobiz XML from a visual interface. Configure elements and copy the output directly into your webhook handler."
+sidebarTitle: "XML Builder"
+---
+
+The Vobiz XML Builder is an interactive, browser-based tool that generates valid Vobiz XML without requiring you to write a single line of code. Select the elements you need, fill in the configuration fields, and the tool produces a ready-to-use XML document you can copy straight into your application or webhook response.
+
+## What you can build
+
+The XML Builder supports every major Vobiz XML element:
+
+<CardGroup cols={3}>
+  <Card title="Speak" icon="microphone">
+    Text-to-speech with voice and language selection.
+  </Card>
+  <Card title="Play" icon="play">
+    Play an audio file from a remote URL.
+  </Card>
+  <Card title="Gather" icon="keyboard">
+    Collect DTMF or speech input from the caller.
+  </Card>
+  <Card title="Record" icon="circle-dot">
+    Record call audio with format and length options.
+  </Card>
+  <Card title="Dial" icon="phone">
+    Forward the call to a number or SIP endpoint.
+  </Card>
+  <Card title="Conference" icon="users">
+    Join a named conference room.
+  </Card>
+  <Card title="Stream" icon="signal">
+    Stream audio to a WebSocket service.
+  </Card>
+  <Card title="Wait" icon="clock">
+    Pause execution for a set number of seconds.
+  </Card>
+  <Card title="PreAnswer" icon="signal-low">
+    Early media ringback before the call is answered.
+  </Card>
+  <Card title="DTMF" icon="hash">
+    Send DTMF tones on a live call.
+  </Card>
+  <Card title="Redirect" icon="arrow-right">
+    Transfer control to a different webhook URL.
+  </Card>
+  <Card title="Hangup" icon="phone-off">
+    End the call with an optional reason.
+  </Card>
+</CardGroup>
+
+## How to use it
+
+<Steps>
+  <Step title="Open the XML Builder">
+    Go to [docs.vobiz.ai/xml-builder](https://www.docs.vobiz.ai/xml-builder) in your browser.
+  </Step>
+  <Step title="Select the elements you need">
+    Check the boxes for each XML element you want to include in your response. You can combine multiple elements — for example, `Speak` followed by `Gather` followed by `Hangup`.
+  </Step>
+  <Step title="Configure each element">
+    Each selected element reveals a configuration panel with its available options — text to speak, voice, language, action URL, timeout, and so on. Fill in the fields relevant to your use case.
+  </Step>
+  <Step title="Copy the generated XML">
+    The XML Builder updates the output pane in real time as you make changes. Click **Copy** to copy the complete XML document to your clipboard.
+  </Step>
+  <Step title="Paste into your application">
+    Return the copied XML from your webhook handler. Set the HTTP `Content-Type` header to `application/xml` or `text/xml` so Vobiz parses it correctly.
+  </Step>
+</Steps>
+
+## Example output
+
+The following XML is what the builder produces for a `<Speak>` element with the default settings.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak voice="WOMAN" language="en-US">
+        Welcome to Vobiz.
+    </Speak>
+</Response>
+```
+
+Adjust the text, voice gender, and language in the builder, and the output updates immediately.
+
+## When to use the XML Builder
+
+<Tabs>
+  <Tab title="Prototyping">
+    Generate XML quickly to test a call flow idea without setting up a server or writing code. Paste the output directly into a static file served over HTTPS.
+  </Tab>
+  <Tab title="Learning the XML format">
+    Use the builder to explore how each element and its attributes translate to valid XML. Comparing the live output with the reference docs is a fast way to learn the syntax.
+  </Tab>
+  <Tab title="Debugging">
+    If a call flow is not behaving as expected, reproduce the intended XML in the builder to confirm the structure is correct, then compare it against what your application is returning.
+  </Tab>
+</Tabs>
+
+<Tip>
+  For production applications, generate XML programmatically in your server code based on business logic. The XML Builder is most useful for prototyping and learning — not as a replacement for a dynamic backend.
+</Tip>
+
+## Next steps
+
+Once you are familiar with the builder output, read the individual verb references to understand every available attribute and callback parameter.
+
+<CardGroup cols={2}>
+  <Card title="XML Overview" icon="book" href="/xml/overview">
+    Understand how Vobiz XML works and explore every verb element.
+  </Card>
+  <Card title="Speak" icon="microphone" href="/xml/speak">
+    Convert text to speech with voice and language control.
+  </Card>
+  <Card title="Gather" icon="keyboard" href="/xml/gather">
+    Collect DTMF digits and speech input from callers.
+  </Card>
+  <Card title="Dial" icon="phone" href="/xml/dial">
+    Bridge the caller to a phone number or SIP endpoint.
+  </Card>
+  <Card title="Record" icon="circle-dot" href="/xml/record">
+    Capture call audio and receive a recording URL.
+  </Card>
+  <Card title="Stream" icon="signal" href="/xml/stream">
+    Stream live audio to your WebSocket server.
+  </Card>
+</CardGroup>

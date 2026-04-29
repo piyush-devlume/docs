@@ -1,0 +1,210 @@
+---
+title: "AI Voice Agents via WebSockets and Python"
+sidebarTitle: "WebSockets & Python"
+description: "Build an AI voice agent with Vobiz WebSocket streaming and Python. Covers split-server architecture, G.711 encoding, WebSocket events, and outbound calling."
+---
+
+Vobiz supports direct WebSocket audio streaming, letting you pipe raw call audio to any AI pipeline without going through a third-party platform. This guide covers the full architecture using Python — including the split-server model, G.711 µ-law audio encoding, all WebSocket event types, and outbound call setup.
+
+<Info>
+  **Reference implementation**: [vobiz-ai/Vobiz-Python-Voice-API-Example](https://github.com/vobiz-ai/Vobiz-Python-Voice-API-Example) — Python 3.11+, FastAPI, websockets, pyngrok.
+</Info>
+
+## Architecture
+
+The reference implementation runs two servers concurrently:
+
+| Server | Port | Role |
+|---|---|---|
+| **FastAPI** | 5000 | Handles HTTP webhooks (`/answer`, `/hangup`), acts as WebSocket proxy/gateway |
+| **Agent Server** | 5001 | Dedicated `websockets` server — maintains call state and audio stream processing |
+
+### Call flow
+
+<Steps>
+  <Step title="Inbound call arrives">
+    Vobiz receives a call to your phone number and fires an HTTP POST to your `/answer` webhook.
+  </Step>
+  <Step title="Return Stream XML">
+    Your server responds with XML containing a `<Stream>` element pointing to your WebSocket URL.
+  </Step>
+  <Step title="WebSocket upgrade">
+    Vobiz initiates a WSS upgrade to your specified WebSocket URL. Your server proxies this to the Agent Server.
+  </Step>
+  <Step title="Bidirectional audio stream">
+    A live audio stream begins between Vobiz and your Agent Server. Your AI processes inbound audio and sends back synthesized speech.
+  </Step>
+</Steps>
+
+## Stream XML
+
+Return this from your `/answer` endpoint to start a bidirectional audio session:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Stream 
+        bidirectional="true" 
+        keepCallAlive="true" 
+        contentType="audio/x-mulaw;rate=8000" 
+        statusCallbackUrl="https://your-domain.com/stream-status" 
+        statusCallbackMethod="POST">
+        wss://your-domain.com/ws
+    </Stream>
+</Response>
+```
+
+- `bidirectional="true"` — enables two-way audio
+- `keepCallAlive="true"` — prevents Vobiz from hanging up when the stream starts
+- `contentType` — must be `audio/x-mulaw;rate=8000` for G.711 µ-law
+
+## WebSocket events
+
+### Inbound (Vobiz → your agent)
+
+**`start`** — sent once at the beginning of the stream:
+
+```json
+{
+  "event": "start",
+  "streamId": "s-uuid-123",
+  "callId": "c-uuid-456",
+  "mediaServer": "vobiz-node-05",
+  "metadata": {
+    "from": "+19295551212",
+    "to": "+18005550199"
+  }
+}
+```
+
+**`media`** — sent every 20ms with caller audio:
+
+```json
+{
+  "event": "media",
+  "media": {
+    "payload": "base64_encoded_8_bit_mulaw_samples",
+    "track": "inbound",
+    "chunkId": "105"
+  }
+}
+```
+
+**`playedStream`** — sent after agent audio reaches a checkpoint:
+
+```json
+{
+  "event": "playedStream",
+  "streamId": "s-uuid-123",
+  "name": "greeting_complete"
+}
+```
+
+**`stop`** — sent when the call ends or stream is closed:
+
+```json
+{
+  "event": "stop",
+  "streamId": "s-uuid-123"
+}
+```
+
+### Outbound (your agent → Vobiz)
+
+**`playAudio`** — play synthesized speech to the caller:
+
+```json
+{
+  "event": "playAudio",
+  "media": {
+    "contentType": "audio/x-mulaw",
+    "sampleRate": 8000,
+    "payload": "base64_mulaw_bytes"
+  }
+}
+```
+
+**`clearAudio`** — immediately stop all buffered audio (use for barge-in/interruption):
+
+```json
+{
+  "event": "clearAudio",
+  "streamId": "s-uuid-123"
+}
+```
+
+**`checkpoint`** — insert a named marker for tracking TTS delivery progress:
+
+```json
+{
+  "event": "checkpoint",
+  "streamId": "s-uuid-123",
+  "name": "step_2_instructions"
+}
+```
+
+## Audio encoding
+
+Vobiz uses the **G.711 µ-law (PCMU)** standard: 8 kHz sample rate, 8-bit depth, logarithmic companding. Most AI TTS engines output 16-bit PCM at 24 kHz or higher. Your pipeline must convert:
+
+1. **Downsample** — interpolate from 24 kHz to 8 kHz
+2. **Compact** — convert each 16-bit linear sample to an 8-bit µ-law byte
+3. **Packetize** — send in 160-byte chunks (= exactly 20ms of audio)
+
+<Note>
+  Always send 160-byte chunks at 20ms intervals. Larger chunks cause jitter; smaller chunks create excessive overhead.
+</Note>
+
+## Making outbound calls
+
+Use the reference `make_call.py` script to trigger outbound calls against the Vobiz REST API:
+
+```bash
+# Terminal 1 — start the server
+python server.py
+
+# Terminal 2 — place an outbound call
+python make_call.py --to +1DESTINATIONNUMBER
+```
+
+The script sends this payload to `POST /api/v1/Account/{auth_id}/Call/`:
+
+```json
+{
+  "from": "+YourVobizNumber",
+  "to": "+CustomerNumber",
+  "answer_url": "https://your-ngrok-url/answer",
+  "answer_method": "POST",
+  "hangup_url": "https://your-ngrok-url/hangup",
+  "hangup_method": "POST"
+}
+```
+
+<Tip>
+  The `answer_url` in the API request overrides the portal default for that specific call. This lets you route different outbound calls to different handlers.
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="AI is talking over me / not stopping">
+    Check `utterance_end_ms` in your Deepgram config in `agent.py` — if too high, it delays end-of-speech detection. Also ensure `clearAudio` is sent immediately when user intent is detected.
+  </Accordion>
+  <Accordion title="401 Unauthorized errors">
+    Set `NGROK_AUTH_TOKEN` in your environment. pyngrok requires authentication for persistent tunnels.
+  </Accordion>
+  <Accordion title="Why 20ms chunks?">
+    The global telephony standard uses 20ms framing. Sending larger chunks causes jitter or robotic audio; smaller chunks add unnecessary network overhead.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Stream XML reference" icon="file-code" href="/xml/stream">
+    Full `<Stream>` element attributes and event documentation.
+  </Card>
+  <Card title="Pipecat integration" icon="plug" href="/integrations/pipecat">
+    Use Pipecat as a higher-level abstraction over WebSocket streaming.
+  </Card>
+</CardGroup>

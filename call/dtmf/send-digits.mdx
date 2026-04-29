@@ -1,0 +1,123 @@
+---
+title: "Send DTMF Digits on an Active Call"
+description: "POST DTMF keypad tones to an active call's A-leg or B-leg to automate IVR navigation, PIN entry, and tone-driven phone interactions."
+---
+
+Use this endpoint to send DTMF digits during a live call. Specify the digit sequence to send and which call leg should receive the tones. This is the primary way to automate keypad interactions — for example, navigating IVR menus, entering conference PINs, or submitting responses to phone surveys.
+
+```
+POST https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/DTMF/
+```
+
+<Note>
+  The call must be in an active state for DTMF digits to be sent. Sending digits to an ended call, or sending invalid characters, returns an error.
+</Note>
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz authentication ID.
+</ParamField>
+
+<ParamField path="call_uuid" type="string" required>
+  Unique identifier of the active call to send digits on.
+</ParamField>
+
+## Request parameters
+
+<ParamField body="digits" type="string" required>
+  The DTMF digit sequence to send. Valid characters: `0`–`9`, `*`, `#`. Digits are sent in the order specified. Example: `1234#`.
+</ParamField>
+
+<ParamField body="leg" type="string" default="aleg">
+  The call leg to receive the DTMF tones. Accepted values:
+
+  - `aleg` — Send to the caller (A-leg).
+  - `bleg` — Send to the callee (B-leg).
+</ParamField>
+
+## Response
+
+A successful request returns HTTP `202 Accepted`.
+
+```json
+{
+  "api_id": "uuid-here",
+  "message": "digits sent"
+}
+```
+
+<ResponseField name="api_id" type="string">
+  Unique identifier for this API request.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Confirmation message. Returns `"digits sent"` on success.
+</ResponseField>
+
+## Code examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/DTMF/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "digits": "1234#",
+    "leg": "aleg"
+  }'
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+call_uuid = "ACTIVE_CALL_UUID"
+
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/DTMF/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+payload = {
+    "digits": "1234#",
+    "leg": "aleg"
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const callUuid = "ACTIVE_CALL_UUID";
+
+const response = await axios.post(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Call/${callUuid}/DTMF/`,
+  {
+    digits: "1234#",
+    leg: "aleg"
+  },
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json"
+    }
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+<Tip>
+  When automating multi-step IVR navigation, add delays between consecutive DTMF requests to allow the IVR system time to process each input and play the next prompt before you send subsequent digits.
+</Tip>

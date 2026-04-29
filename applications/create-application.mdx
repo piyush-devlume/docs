@@ -1,0 +1,210 @@
+---
+title: "Create a new Vobiz voice application"
+description: "Create an Application with answer, hangup, fallback, and message URLs to control how Vobiz routes and handles incoming calls and messages."
+sidebarTitle: "Create application"
+---
+
+Use this endpoint to create a new Application with webhook URLs that Vobiz calls when events occur on your numbers. After creating an Application, attach it to a phone number or SIP endpoint so that Vobiz knows how to route calls for that resource.
+
+**POST** `https://api.vobiz.ai/api/v1/Account/{authID}/Application/`
+
+## Path parameters
+
+<ParamField path="authID" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+## Body parameters
+
+<ParamField body="app_name" type="string" required>
+  The name of your application. Allowed characters: letters (upper and lower case), digits (0–9), hyphens (`-`), and underscores (`_`).
+</ParamField>
+
+<ParamField body="answer_url" type="string" required>
+  The URL Vobiz fetches when a call executes this application. Your server must return valid Vobiz XML.
+</ParamField>
+
+<ParamField body="answer_method" type="string">
+  HTTP method for `answer_url`. Default: `POST`.
+</ParamField>
+
+<ParamField body="hangup_url" type="string">
+  URL notified when the call hangs up. Defaults to `answer_url` if not set.
+</ParamField>
+
+<ParamField body="hangup_method" type="string">
+  HTTP method for `hangup_url`. Default: `POST`.
+</ParamField>
+
+<ParamField body="fallback_answer_url" type="string">
+  Invoked by Vobiz only if `answer_url` is unavailable or returns invalid XML. Should return valid Vobiz XML.
+</ParamField>
+
+<ParamField body="fallback_method" type="string">
+  HTTP method for `fallback_answer_url`. Default: `POST`.
+</ParamField>
+
+<ParamField body="message_url" type="string">
+  URL notified when an inbound message is received. Not set by default.
+</ParamField>
+
+<ParamField body="message_method" type="string">
+  HTTP method for `message_url`. Default: `POST`.
+</ParamField>
+
+<ParamField body="default_number_app" type="boolean">
+  When `true`, newly created phone numbers without an explicit `app_id` are automatically associated with this application.
+</ParamField>
+
+<ParamField body="default_endpoint_app" type="boolean">
+  When `true`, newly created SIP endpoints without an explicit `app_id` are automatically associated with this application.
+</ParamField>
+
+<ParamField body="subaccount" type="string">
+  ID of the sub-account to associate with this application.
+</ParamField>
+
+<ParamField body="application_type" type="string">
+  The type of application (e.g., `voice`, `messaging`).
+</ParamField>
+
+<ParamField body="default_app" type="boolean">
+  Whether this is the default application for the account.
+</ParamField>
+
+<ParamField body="enabled" type="boolean">
+  Whether the application is enabled. Default: `true`.
+</ParamField>
+
+<ParamField body="log_incoming_messages" type="boolean">
+  When `false`, incoming messages to numbers associated with this application are not logged in Vobiz systems. Default: `true`.
+</ParamField>
+
+<ParamField body="public_uri" type="boolean">
+  Whether the application has a public SIP URI.
+</ParamField>
+
+<ParamField body="sip_transfer_url" type="string">
+  URL notified during a SIP transfer.
+</ParamField>
+
+<ParamField body="sip_transfer_method" type="string">
+  HTTP method for SIP transfer callbacks.
+</ParamField>
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Application/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "app_name": "My IVR System",
+    "answer_url": "https://myapp.com/ivr/answer",
+    "answer_method": "POST",
+    "hangup_url": "https://myapp.com/ivr/hangup",
+    "fallback_answer_url": "https://myapp.com/ivr/fallback"
+  }'
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Application/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+payload = {
+    "app_name": "My IVR System",
+    "answer_url": "https://myapp.com/ivr/answer",
+    "answer_method": "POST",
+    "hangup_url": "https://myapp.com/ivr/hangup",
+    "fallback_answer_url": "https://myapp.com/ivr/fallback"
+}
+
+response = requests.post(url, headers=headers, json=payload)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const response = await axios.post(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Application/`,
+  {
+    app_name: "My IVR System",
+    answer_url: "https://myapp.com/ivr/answer",
+    answer_method: "POST",
+    hangup_url: "https://myapp.com/ivr/hangup",
+    fallback_answer_url: "https://myapp.com/ivr/fallback",
+  },
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json",
+    },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response fields
+
+<ResponseField name="api_id" type="string">
+  Internal API request identifier.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Confirmation message (e.g., `created`).
+</ResponseField>
+
+<ResponseField name="app_id" type="string">
+  Unique identifier for the newly created application.
+</ResponseField>
+
+<ResponseField name="application_type" type="string">
+  The type of application.
+</ResponseField>
+
+<ResponseField name="enabled" type="boolean">
+  Whether the application is enabled.
+</ResponseField>
+
+<ResponseField name="resource_uri" type="string">
+  API resource URI for the new application.
+</ResponseField>
+
+## Example response
+
+```json 201 Created
+{
+  "api_id": "api_v1_XXXXXX",
+  "message": "created",
+  "app_id": "12345678",
+  "application_type": "voice",
+  "enabled": true,
+  "default_app": false,
+  "resource_uri": "/v1/Account/MA_XXXXXX/Application/12345678/"
+}
+```
+
+```json 400 Bad Request
+{
+  "error": "invalid request parameters",
+  "details": {
+    "app_name": "This field is required",
+    "answer_url": "Enter a valid URL"
+  }
+}
+```

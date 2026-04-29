@@ -1,0 +1,115 @@
+---
+title: "The Trunk Object — SIP Trunk Attributes Reference"
+description: "Full field reference for the Vobiz trunk object: SIP domain, rate limits, enabled status, authentication references, and all fields returned by trunk endpoints."
+sidebarTitle: "Trunk object"
+---
+
+The trunk object represents a SIP trunking connection in your Vobiz account. Every trunk acts as an independent voice gateway with its own authentication rules, rate limits, and routing configuration. When you create a trunk, Vobiz automatically generates a unique SIP domain in the format `{trunk_id}.sip.vobiz.ai` for inbound call routing.
+
+## Attributes
+
+<ResponseField name="trunk_id" type="string (UUID)">
+  Unique identifier for the trunk. Auto-generated on creation. Use this value for all subsequent API operations on this trunk.
+</ResponseField>
+
+<ResponseField name="auth_id" type="string">
+  The account identifier that owns this trunk. Matches your `X-Auth-ID` header value.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Descriptive name for the trunk. Maximum 255 characters. Required on creation.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Optional description providing additional context about the trunk's purpose or regional configuration.
+</ResponseField>
+
+<ResponseField name="trunk_domain" type="string">
+  Auto-generated SIP domain in the format `{trunk_id}.sip.vobiz.ai`. Used for inbound call routing to this trunk.
+</ResponseField>
+
+<ResponseField name="trunk_status" type="string">
+  Current status of the trunk. Common values: `active`, `enabled`, `disabled`.
+</ResponseField>
+
+<ResponseField name="trunk_direction" type="string">
+  Direction of calls supported. Values: `outbound`, `inbound`, `both`.
+</ResponseField>
+
+<ResponseField name="secure" type="boolean">
+  Whether the trunk uses TLS/SRTP for encrypted media transport.
+</ResponseField>
+
+<ResponseField name="transport" type="string">
+  SIP transport protocol. Values: `udp`, `tcp`.
+</ResponseField>
+
+<ResponseField name="concurrent_calls_limit" type="integer">
+  Maximum number of simultaneous calls allowed on this trunk. Default: `10`.
+</ResponseField>
+
+<ResponseField name="cps_limit" type="integer">
+  Calls-per-second rate limit to prevent traffic flooding. Default: `5`.
+</ResponseField>
+
+<ResponseField name="enabled" type="boolean">
+  Whether the trunk is active and can handle calls. Set to `false` to disable without deleting. Default: `true`.
+</ResponseField>
+
+<ResponseField name="ipacl_uuid" type="string (UUID)">
+  UUID of the IP Access Control List associated with this trunk. `null` if no IP ACL is configured.
+</ResponseField>
+
+<ResponseField name="credential_uuid" type="string (UUID)">
+  UUID of the credential associated with this trunk. `null` if no credential is configured.
+</ResponseField>
+
+<ResponseField name="primary_uri_uuid" type="string (UUID)">
+  UUID of the primary origination URI for outbound call routing.
+</ResponseField>
+
+<ResponseField name="fallback_uri_uuid" type="string (UUID)">
+  UUID of the fallback origination URI used when the primary is unreachable.
+</ResponseField>
+
+<ResponseField name="inbound_destination" type="string">
+  SIP URI to which inbound calls are forwarded (e.g., `5hj19p4hixv.sip.livekit.cloud`).
+</ResponseField>
+
+<ResponseField name="created_at" type="string (ISO 8601)">
+  UTC timestamp of when the trunk was created. Format: `YYYY-MM-DDTHH:mm:ssZ`.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string (ISO 8601)">
+  UTC timestamp of the most recent update. Format: `YYYY-MM-DDTHH:mm:ssZ`.
+</ResponseField>
+
+## Example
+
+```json
+{
+  "trunk_id": "bfab10fb-cb97-488b-9c63-989c32980b0f",
+  "auth_id": "MA_XYZ123",
+  "name": "Production Trunk",
+  "description": "Main production SIP trunk for US East region",
+  "trunk_domain": "bfab10fb.sip.vobiz.ai",
+  "trunk_status": "active",
+  "trunk_direction": "both",
+  "secure": false,
+  "transport": "udp",
+  "concurrent_calls_limit": 100,
+  "cps_limit": 10,
+  "enabled": true,
+  "ipacl_uuid": "c1d2e3f4-a5b6-7890-cdef-1234567890ab",
+  "credential_uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "primary_uri_uuid": "e1f2a3b4-c5d6-7890-efab-567890123456",
+  "fallback_uri_uuid": "f2g3h4i5-j6k7-8901-lmno-678901234567",
+  "inbound_destination": "5hj19p4hixv.sip.livekit.cloud",
+  "created_at": "2025-01-15T10:30:45Z",
+  "updated_at": "2025-01-20T14:22:10Z"
+}
+```
+
+<Note>
+The `concurrent_calls_limit` and `cps_limit` fields protect your trunk from overload and help control costs. All timestamps are in UTC following ISO 8601 format.
+</Note>

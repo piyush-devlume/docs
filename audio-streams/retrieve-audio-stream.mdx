@@ -1,0 +1,137 @@
+---
+title: "Retrieve a Specific Audio Stream by ID"
+sidebarTitle: "Retrieve an audio stream"
+description: "Fetch the full details of a single audio stream on a call by its stream ID, including status, configuration, and start and end timestamps."
+---
+
+Use this endpoint to retrieve the full Stream object for a specific audio stream attached to a given call. Use it to check the current status, codec configuration, and timing of an ongoing or completed stream.
+
+## Endpoint
+
+```
+GET https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Stream/{stream_id}/
+```
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account authentication ID.
+</ParamField>
+
+<ParamField path="call_uuid" type="string" required>
+  UUID of the call the stream is attached to.
+</ParamField>
+
+<ParamField path="stream_id" type="string" required>
+  Unique ID of the stream to retrieve. Returned by the [Start an audio stream](/audio-streams/start-audio-stream) endpoint.
+</ParamField>
+
+## Response
+
+Returns HTTP `200 OK` with the full Stream object on success.
+
+<ResponseField name="stream_id" type="string">
+  Unique identifier for this stream.
+</ResponseField>
+
+<ResponseField name="call_uuid" type="string">
+  UUID of the call this stream is attached to.
+</ResponseField>
+
+<ResponseField name="service_url" type="string">
+  WebSocket URL receiving the forked audio.
+</ResponseField>
+
+<ResponseField name="status_callback_url" type="string">
+  URL called on stream lifecycle events.
+</ResponseField>
+
+<ResponseField name="bidirectional" type="boolean">
+  Whether the stream allows audio to be sent back into the call.
+</ResponseField>
+
+<ResponseField name="audio_track" type="string">
+  Track being streamed: `inbound`, `outbound`, or `both`.
+</ResponseField>
+
+<ResponseField name="content_type" type="string">
+  Audio encoding format and sample rate (e.g. `audio/x-l16;rate=16000`).
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Current stream status: `in-progress`, `completed`, or `failed`.
+</ResponseField>
+
+<ResponseField name="start_time" type="string">
+  ISO 8601 timestamp when the stream started.
+</ResponseField>
+
+<ResponseField name="end_time" type="string">
+  ISO 8601 timestamp when the stream ended. Returns `null` if the stream is still active.
+</ResponseField>
+
+```json
+{
+  "stream_id": "728e273b-9c2c-4902-8509-2f88224cd3d5",
+  "call_uuid": "c6ebf396-59c2-4f2a-8771-fbb5d981e301",
+  "service_url": "wss://your-server.com/ws",
+  "status_callback_url": "https://your-server.com/stream-status",
+  "bidirectional": true,
+  "audio_track": "both",
+  "content_type": "audio/x-l16;rate=16000",
+  "status": "in-progress",
+  "start_time": "2026-04-24T09:25:00Z",
+  "end_time": null
+}
+```
+
+If the stream does not exist, the API returns HTTP 404:
+
+```json
+{
+  "api_id": "correlation-id-uuid",
+  "error": "Stream not found"
+}
+```
+
+## Code examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET \
+  'https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Stream/{stream_id}/' \
+  -H 'X-Auth-ID: {auth_id}' \
+  -H 'X-Auth-Token: {auth_token}'
+```
+
+```python Python
+import requests
+
+AUTH_ID = "{auth_id}"
+AUTH_TOKEN = "{auth_token}"
+CALL_UUID = "{call_uuid}"
+STREAM_ID = "{stream_id}"
+
+url = (
+    f"https://api.vobiz.ai/api/v1/Account/{AUTH_ID}"
+    f"/Call/{CALL_UUID}/Stream/{STREAM_ID}/"
+)
+
+headers = {
+    "X-Auth-ID": AUTH_ID,
+    "X-Auth-Token": AUTH_TOKEN,
+}
+
+response = requests.get(url, headers=headers)
+
+if response.status_code == 200:
+    stream = response.json()
+    print(f"Status: {stream['status']}, Track: {stream['audio_track']}")
+elif response.status_code == 404:
+    print("Stream not found.")
+else:
+    print(response.status_code, response.text)
+```
+
+</CodeGroup>

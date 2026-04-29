@@ -1,0 +1,95 @@
+---
+title: "Permanently delete a Vobiz application"
+description: "Delete an application from your Vobiz account. You must unlink all phone numbers from the application before deletion will succeed."
+sidebarTitle: "Delete application"
+---
+
+Use this endpoint to permanently delete an application from your account. If the application is currently associated with phone numbers, the deletion will be blocked with a 409 Conflict error until you remove those associations. Deletion is permanent and cannot be undone.
+
+**DELETE** `https://api.vobiz.ai/api/v1/Account/{authID}/Application/{appID}/`
+
+<Warning>
+  Deleting an application is permanent. Ensure no active phone numbers or endpoints are attached to the application before deleting, or remove those associations first.
+</Warning>
+
+## Path parameters
+
+<ParamField path="authID" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+<ParamField path="appID" type="string" required>
+  The unique identifier of the application to delete (e.g., `12345678`).
+</ParamField>
+
+No request body is required.
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Application/12345678/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+app_id = "12345678"
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Application/{app_id}/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.delete(url, headers=headers)
+# Successful deletion returns 204 No Content
+print(response.status_code)
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const appId = "12345678";
+
+const response = await axios.delete(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Application/${appId}/`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    },
+  }
+);
+
+// Successful deletion returns HTTP 204
+console.log(response.status);
+```
+
+</CodeGroup>
+
+## Response
+
+A successful deletion returns **HTTP 204 No Content** with no response body.
+
+```json 404 Not Found
+{
+  "error": "Application not found",
+  "app_id": "99999999"
+}
+```
+
+```json 409 Conflict
+{
+  "error": "Cannot delete application",
+  "message": "Application is currently in use by 5 phone numbers"
+}
+```
+
+<Tip>
+  Before deleting an application, use the [List All Applications](/applications/list-all-applications) endpoint to verify its current `default_number_app` and `default_endpoint_app` flags. Detach all associated numbers using the [Link Numbers](/applications/link-numbers) endpoint before proceeding.
+</Tip>

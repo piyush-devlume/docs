@@ -1,0 +1,205 @@
+---
+title: "Speak Text on Active Calls with Text-to-Speech"
+description: "Convert text to speech on a live call. Choose from multiple languages and voices to deliver dynamic, personalized messages without pre-recording audio files."
+---
+
+The speak text endpoint uses Vobiz's text-to-speech (TTS) engine to convert written text into spoken audio during an ongoing call. Deliver dynamic messages, personalized greetings, queue updates, or IVR prompts on demand — without recording any audio files in advance. Vobiz supports 29 languages with both `WOMAN` and `MAN` voice options.
+
+```
+POST https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Speak/
+```
+
+**Default:** English (US), `WOMAN` voice.
+
+## Start speaking text
+
+### Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account Auth ID.
+</ParamField>
+
+<ParamField path="call_uuid" type="string" required>
+  Unique identifier of the active call.
+</ParamField>
+
+### Request parameters
+
+<ParamField body="text" type="string" required>
+  The text to convert to speech and play on the call. Use plain text with standard punctuation for the best results. Avoid special characters and emojis.
+</ParamField>
+
+<ParamField body="voice" type="string" default="WOMAN">
+  Voice gender. Accepted values: `WOMAN`, `MAN`. Availability varies by language.
+</ParamField>
+
+<ParamField body="language" type="string" default="en-US">
+  Language code for the text-to-speech engine. Examples: `en-US` (English US), `es-ES` (Spanish Spain), `fr-FR` (French), `de-DE` (German), `zh-CN` (Chinese Simplified), `ja-JP` (Japanese). 29 languages are supported.
+</ParamField>
+
+<ParamField body="legs" type="string" default="aleg">
+  Which call participant(s) hear the speech. Accepted values:
+
+  - `aleg` — Speak to the caller only.
+  - `bleg` — Speak to the callee only.
+  - `both` — Speak to both participants.
+</ParamField>
+
+<ParamField body="loop" type="boolean" default="false">
+  When `true`, repeats the text continuously until speaking is stopped.
+</ParamField>
+
+<ParamField body="mix" type="boolean" default="true">
+  When `true`, mixes the TTS audio with live call audio. Set to `false` to mute call participants during playback for critical announcements.
+</ParamField>
+
+## Stop speaking text
+
+```
+DELETE https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Speak/
+```
+
+Send a `DELETE` request to stop text-to-speech currently playing on the call.
+
+## Code examples
+
+<Tabs>
+  <Tab title="Speak text">
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X POST \
+      https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Speak/ \
+      -H "X-Auth-ID: YOUR_AUTH_ID" \
+      -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "text": "Please hold while we connect you to an agent.",
+        "voice": "WOMAN",
+        "language": "en-US",
+        "legs": "aleg",
+        "loop": false
+      }'
+    ```
+
+    ```python Python
+    import requests
+
+    auth_id = "YOUR_AUTH_ID"
+    call_uuid = "ACTIVE_CALL_UUID"
+
+    url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Speak/"
+    headers = {
+        "X-Auth-ID": auth_id,
+        "X-Auth-Token": "YOUR_AUTH_TOKEN",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "text": "Please hold while we connect you to an agent.",
+        "voice": "WOMAN",
+        "language": "en-US",
+        "legs": "aleg",
+        "loop": False
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    print(response.json())
+    ```
+
+    ```javascript Node.js
+    const axios = require("axios");
+
+    const authId = "YOUR_AUTH_ID";
+    const callUuid = "ACTIVE_CALL_UUID";
+
+    const response = await axios.post(
+      `https://api.vobiz.ai/api/v1/Account/${authId}/Call/${callUuid}/Speak/`,
+      {
+        text: "Please hold while we connect you to an agent.",
+        voice: "WOMAN",
+        language: "en-US",
+        legs: "aleg",
+        loop: false
+      },
+      {
+        headers: {
+          "X-Auth-ID": authId,
+          "X-Auth-Token": "YOUR_AUTH_TOKEN",
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    console.log(response.data);
+    ```
+
+    </CodeGroup>
+  </Tab>
+  <Tab title="Stop speaking">
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X DELETE \
+      https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Speak/ \
+      -H "X-Auth-ID: YOUR_AUTH_ID" \
+      -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+    ```
+
+    ```python Python
+    import requests
+
+    auth_id = "YOUR_AUTH_ID"
+    call_uuid = "ACTIVE_CALL_UUID"
+
+    url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Speak/"
+    headers = {
+        "X-Auth-ID": auth_id,
+        "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    }
+
+    response = requests.delete(url, headers=headers)
+    print(response.status_code)
+    ```
+
+    ```javascript Node.js
+    const axios = require("axios");
+
+    const authId = "YOUR_AUTH_ID";
+    const callUuid = "ACTIVE_CALL_UUID";
+
+    await axios.delete(
+      `https://api.vobiz.ai/api/v1/Account/${authId}/Call/${callUuid}/Speak/`,
+      {
+        headers: {
+          "X-Auth-ID": authId,
+          "X-Auth-Token": "YOUR_AUTH_TOKEN"
+        }
+      }
+    );
+
+    console.log("Text-to-speech stopped.");
+    ```
+
+    </CodeGroup>
+  </Tab>
+</Tabs>
+
+## Best practices
+
+<AccordionGroup>
+  <Accordion title="Keep text concise">
+    Short, clear messages are easier for callers to understand. Break long content into multiple speak requests if needed.
+  </Accordion>
+  <Accordion title="Use standard punctuation">
+    Punctuation affects speech pacing and tone. Use periods, commas, and question marks for natural-sounding output.
+  </Accordion>
+  <Accordion title="Avoid special characters and emojis">
+    Emojis and special symbols may not render correctly in TTS output. Use plain text for best results.
+  </Accordion>
+  <Accordion title="Test different voices">
+    Try both `WOMAN` and `MAN` voices to find which suits your use case and audience best.
+  </Accordion>
+  <Accordion title="Match language to caller preference">
+    Set the `language` parameter to match your caller's preferred language for better comprehension and experience.
+  </Accordion>
+</AccordionGroup>

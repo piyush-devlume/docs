@@ -1,0 +1,84 @@
+---
+title: "Integrate Vobiz SIP trunking with Bolna.ai"
+description: "Add Vobiz as the telephony provider in Bolna.ai to enable outbound and inbound AI calling with SIP trunk credentials and phone number configuration."
+sidebarTitle: "Bolna"
+---
+
+Bolna.ai is a production-ready platform for building and deploying conversational voice agents. By connecting Bolna to Vobiz, your agents get global calling capabilities through Vobiz's SIP trunking infrastructure. You can also provision and manage phone numbers directly within Bolna using your Vobiz inventory.
+
+**Capabilities after integration:**
+
+- **Outbound calling:** AI agents initiate calls to customers using Vobiz as the telephony carrier.
+- **Inbound calling:** AI agents answer incoming calls on your Vobiz phone numbers.
+- **Simplified provisioning:** Purchase and assign numbers from within the Bolna platform.
+
+## Prerequisites
+
+- A Vobiz account with active balance — your **Auth Token** and **Auth Secret** are required — [sign up](https://console.vobiz.ai/auth/signup)
+- A Bolna.ai account — [sign up](https://bolna.ai)
+
+## Step 1: Add Vobiz as a provider
+
+<Steps>
+  <Step title="Open Providers">
+    Log in to the [Bolna Platform](https://platform.bolna.ai) and navigate to the **Providers** section.
+  </Step>
+  <Step title="Find your Vobiz credentials">
+    In the [Vobiz Console](https://console.vobiz.ai), go to **Dashboard → Settings → API Keys** and copy:
+
+    | Credential | Description |
+    |---|---|
+    | Auth Token | `<your_auth_token>` |
+    | Auth Secret | `<your_auth_secret>` |
+  </Step>
+  <Step title="Enter credentials in Bolna">
+    Locate the Vobiz provider option in the Bolna Providers list and enter your **Auth Token** and **Auth Secret**.
+  </Step>
+</Steps>
+
+Once you save your credentials, the Vobiz telephony status in Bolna shows **Connected**.
+
+<Note>
+If you have existing phone numbers in your Vobiz account, they will appear automatically in the Bolna number selection list after credentials are saved—no manual import required.
+</Note>
+
+## Step 2: Configure outbound calls
+
+<Steps>
+  <Step title="Open your agent settings">
+    In the Bolna Platform, navigate to the **Call Agent** section for the agent you want to use for outbound calls.
+  </Step>
+  <Step title="Select Vobiz as the provider">
+    In the telephony provider dropdown, select **Vobiz**.
+  </Step>
+</Steps>
+
+Your agent now routes all outbound calls through your Vobiz SIP trunk.
+
+## Step 3: Set up inbound calls
+
+<Steps>
+  <Step title="Open inbound configuration">
+    In the Bolna Platform, navigate to the inbound call settings for your agent.
+  </Step>
+  <Step title="Set the inbound agent">
+    Select which agent should answer incoming calls. You can configure different agents for different phone numbers.
+  </Step>
+  <Step title="Select phone numbers">
+    Choose which Vobiz phone numbers should be handled by this agent. Numbers from your Vobiz account appear in the selection list automatically after credentials are connected.
+  </Step>
+</Steps>
+
+## Step 4: Assign phone numbers
+
+You can provision new phone numbers directly within Bolna using your Vobiz number inventory. Numbers are billed through your Vobiz account.
+
+<Tip>
+If you already purchased numbers in the Vobiz Console, they appear in the Bolna selection list automatically—no additional import step is needed.
+</Tip>
+
+## Resources
+
+- [Bolna documentation](https://docs.bolna.ai)
+- Vobiz support: [support@vobiz.ai](mailto:support@vobiz.ai)
+- Bolna support: [support@bolna.ai](mailto:support@bolna.ai)

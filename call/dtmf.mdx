@@ -1,0 +1,56 @@
+---
+title: "DTMF Tones on Active Calls: Overview"
+description: "Send DTMF keypad tones during live calls to automate IVR navigation, enter access codes, and control phone systems programmatically."
+sidebarTitle: "DTMF"
+---
+
+DTMF (Dual-Tone Multi-Frequency) refers to the tones generated when a key is pressed on a phone keypad. The Vobiz DTMF API lets you send these tones programmatically during an active call, enabling fully automated interactions with IVR systems, conference bridges, voicemail systems, and any other tone-driven phone service.
+
+## Base endpoint
+
+```
+https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/DTMF/
+```
+
+## Supported digits
+
+You can send any standard DTMF character:
+
+- Numeric digits: `0` through `9`
+- Star: `*`
+- Hash: `#`
+
+## Key capabilities
+
+<CardGroup cols={2}>
+  <Card title="IVR navigation" icon="list-tree">
+    Automatically navigate IVR menus by sending the appropriate selection digits without manual input.
+  </Card>
+  <Card title="Leg selection" icon="split">
+    Target a specific call leg — send digits to the caller (A-leg) or the callee (B-leg) independently.
+  </Card>
+  <Card title="Access code entry" icon="key">
+    Enter conference PINs, voicemail passcodes, or account verification numbers programmatically.
+  </Card>
+  <Card title="Automation ready" icon="robot">
+    Integrate DTMF sending into automated call flows and outbound dialer workflows.
+  </Card>
+</CardGroup>
+
+## Common use cases
+
+- **IVR menu navigation** — Select menu options and sub-menus without human interaction.
+- **Conference codes** — Join conference bridges by entering PINs automatically.
+- **Automated survey responses** — Submit responses to phone-based surveys or feedback systems.
+- **Account verification** — Enter account numbers or verification codes during calls.
+- **Phone system control** — Send commands to systems that accept DTMF input.
+
+## Available operations
+
+<Card title="Send digits on a call" icon="dial-pad" href="/call/dtmf/send-digits">
+  Send DTMF digits to an active call. Specify the digit sequence and the target call leg.
+</Card>
+
+<Tip>
+  When automating multi-step IVR navigation, add deliberate delays between DTMF sends to give the system time to process each input and play the next prompt before you send the next digit.
+</Tip>

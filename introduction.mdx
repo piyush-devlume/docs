@@ -1,0 +1,94 @@
+---
+title: "Vobiz Developer Platform: Voice & Telephony APIs"
+description: "Vobiz provides enterprise SIP trunking, programmable voice APIs, and AI voice integrations. Learn what you can build and how the platform is organized."
+---
+
+Vobiz is a developer platform for voice and telephony. It gives you enterprise-grade SIP trunking, a programmable Voice XML API, and direct integrations with leading AI voice agent platforms — all accessible through a single REST API and console. Whether you are building an AI-powered call center, a custom IVR, or a real-time voice bot, Vobiz provides the carrier connectivity and infrastructure layer your application needs.
+
+## What you can build
+
+<CardGroup cols={2}>
+  <Card title="AI voice agents" icon="microphone">
+    Connect SIP trunks or WebSocket audio streams directly to VAPI, Retell AI, ElevenLabs, LiveKit, Pipecat, or your own pipeline to build conversational AI agents that answer real phone calls.
+  </Card>
+  <Card title="Programmable IVR" icon="phone">
+    Return Voice XML from your webhook to control call flow: gather DTMF or speech input, play audio, branch logic, and transfer callers — all from your own code.
+  </Card>
+  <Card title="SIP trunking" icon="server">
+    Route PSTN calls to your existing PBX, SIP softphone, or hosted platform using inbound and outbound SIP trunks with IP or credential authentication.
+  </Card>
+  <Card title="Call analytics" icon="chart-bar">
+    Query call detail records, export CSV reports, track duration and cost, and receive real-time webhook events for every call lifecycle transition.
+  </Card>
+</CardGroup>
+
+## How the documentation is organized
+
+<CardGroup cols={3}>
+  <Card title="Quick start" icon="rocket" href="/quick-start">
+    Sign up, buy a phone number, set up a SIP trunk or XML application, and make your first call.
+  </Card>
+  <Card title="Core concepts" icon="book-open" href="/concepts/overview">
+    Understand SIP trunking, WebSocket audio streaming, callbacks, and when to use each architecture.
+  </Card>
+  <Card title="Call detail records" icon="list" href="/cdr">
+    Query, filter, and export CDR data for billing reconciliation, traffic analysis, and compliance.
+  </Card>
+  <Card title="Error handling" icon="triangle-alert" href="/errors">
+    HTTP status codes, standardized error format, common errors with examples, and troubleshooting steps.
+  </Card>
+  <Card title="Best practices" icon="shield-check" href="/best-practices">
+    Security, authentication, performance, reliability, and testing recommendations for production integrations.
+  </Card>
+  <Card title="FAQ" icon="circle-help" href="/faq">
+    Answers to common questions on concurrency, CPS limits, SIP codes, IVR, call transfer, and more.
+  </Card>
+</CardGroup>
+
+## Authentication
+
+All API requests require two headers:
+
+| Header | Description |
+|---|---|
+| `X-Auth-ID` | Your account Auth ID |
+| `X-Auth-Token` | Your account Auth Token |
+
+Find both values in the **Account Settings** section of the [Vobiz console](https://console.vobiz.ai).
+
+```bash
+curl -X GET "https://api.vobiz.ai/api/v1/account/{auth_id}/..." \
+  --header "X-Auth-ID: {auth_id}" \
+  --header "X-Auth-Token: {auth_token}"
+```
+
+## Ecosystem integrations
+
+Vobiz SIP trunking is tested and documented with every major AI voice platform:
+
+<CardGroup cols={4}>
+  <Card title="VAPI" icon="phone-call" href="/integrations/vapi-dashboard">
+    BYO SIP trunk with custom header injection for CRM-driven AI agents.
+  </Card>
+  <Card title="Retell AI" icon="phone-call" href="/integrations/retellai-dashboard">
+    Elastic SIP trunk or dynamic API registration hooks.
+  </Card>
+  <Card title="ElevenLabs" icon="phone-call" href="/integrations/elevenlabs-dashboard">
+    Native SIP integration — calls answered directly by an ElevenLabs AI agent.
+  </Card>
+  <Card title="LiveKit" icon="phone-call" href="/integrations/livekit">
+    SIP Service absorbs trunks and outputs standard SIP participants into WebRTC rooms.
+  </Card>
+  <Card title="Pipecat" icon="phone-call" href="/integrations/pipecat">
+    WebSocket audio streaming with VobizFrameSerializer for µ-law conversion.
+  </Card>
+  <Card title="Bolna" icon="phone-call" href="/integrations/bolna">
+    Managed voice AI orchestration via WebSocket streams or SIP trunk.
+  </Card>
+  <Card title="Ultravox" icon="phone-call" href="/integrations/ultravox">
+    Real-time AI voice via WebSocket audio; SIP via intermediary transport.
+  </Card>
+  <Card title="View all" icon="grid" href="/integrations">
+    Browse every supported platform integration.
+  </Card>
+</CardGroup>

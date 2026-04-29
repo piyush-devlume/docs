@@ -1,0 +1,46 @@
+---
+title: "Core Concepts: Vobiz Telephony Architecture"
+description: "Learn SIP signaling and RTP media, WebSocket audio streaming, callbacks, and how to choose the right architecture for your AI voice integration."
+sidebarTitle: "Overview"
+---
+
+This section explains the architectural patterns and protocols that power Vobiz telephony services. Understanding these concepts helps you make informed decisions about how to connect your application to the PSTN, which integration path fits your use case, and how different components interact at runtime.
+
+## What you will learn
+
+- How SIP signaling and RTP media work — the full protocol mechanics, not just the surface
+- How Voice XML WebSocket streaming connects phone calls directly to your AI pipeline
+- When to choose SIP (LiveKit, VAPI, Retell, call transfer) vs. WebSockets (Pipecat, direct Python, cost optimization)
+- How callbacks and webhooks enable real-time event notifications for call lifecycle events
+- Configuration patterns for callback URLs, authentication, and hierarchy
+
+## Concepts
+
+<CardGroup cols={2}>
+  <Card title="SIP trunking" icon="network" href="/concepts/sip-trunking">
+    How SIP actually works — the full INVITE→RTP message flow, signaling vs. media separation, codec negotiation, and how LiveKit, VAPI, Retell AI, and ElevenLabs each use SIP. Includes 10 real developer pitfalls.
+  </Card>
+  <Card title="WebSocket streaming" icon="radio" href="/concepts/streaming-websockets">
+    How Voice XML audio streaming works — WebSocket message types, G.711 µ-law encoding, the full audio conversion pipeline, Pipecat architecture, and direct Python integration with Vobiz.
+  </Card>
+  <Card title="Callbacks" icon="webhook" href="/concepts/callbacks">
+    Understand how callbacks and webhooks work in Vobiz — event types, URL configuration, authentication, retry behavior, and security best practices.
+  </Card>
+</CardGroup>
+
+## Choosing an architecture
+
+The two primary integration paths for connecting phone calls to AI voice agents are **SIP trunking** and **WebSocket streaming**. They operate at completely different layers of the stack.
+
+| | SIP trunking | WebSocket streaming |
+|---|---|---|
+| Protocol layer | Telephony (signaling + RTP media) | Application (TCP/WebSocket) |
+| Setup complexity | High — trunk config, IP ACLs, SIP URI routing, firewall | Low/Medium — VoiceXML webhook + WebSocket JSON |
+| Call setup latency | 1–5 seconds (INVITE handshake + PSTN routing) | Near-instant (WebSocket handshake + webhook fetch) |
+| Infrastructure cost | Vobiz rate + AI platform fee (LiveKit/VAPI/Retell) | Vobiz rate + raw AI API costs only |
+| Enterprise PBX | Native — Avaya, Cisco UCM, Teams Direct Routing | Not applicable |
+| Best for | LiveKit, VAPI, Retell AI, ElevenLabs, call transfer | Pipecat, direct Python/Node.js, cost optimization at scale |
+
+<Tip>
+  Under 50,000 calls/month, a managed SIP platform (VAPI, Retell, LiveKit) saves weeks of engineering time. Above 50,000 calls/month, owning a WebSocket pipeline pays off by eliminating per-call platform markup.
+</Tip>

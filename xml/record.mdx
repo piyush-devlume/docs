@@ -1,0 +1,184 @@
+---
+title: "Record Element: Capture Call Audio in Vobiz XML"
+description: "Record element captures call audio as MP3 or WAV. Configure max length, beep prompts, finish keys, auto-transcription, and action URL callbacks for recordings."
+sidebarTitle: "Record"
+---
+
+The `<Record>` element records the call audio and posts the recording URL to your `action` URL when the recording ends. Use it to capture voicemail messages, customer feedback, meeting audio, or any spoken content you need to store or process later. You can control the maximum duration, the finish key, the file format, and whether to transcribe the recording automatically.
+
+## Attributes
+
+<ParamField body="action" type="string" required>
+  URL that Vobiz calls when the recording ends. The recording URL and metadata are included in the request. Must be a fully qualified URL.
+</ParamField>
+
+<ParamField body="method" type="string" default="POST">
+  HTTP method used when calling the `action` URL.
+
+  **Allowed values:** `GET`, `POST`
+</ParamField>
+
+<ParamField body="fileFormat" type="string" default="mp3">
+  File format of the recording.
+
+  **Allowed values:** `mp3`, `wav`
+</ParamField>
+
+<ParamField body="maxLength" type="integer" default="60">
+  Maximum recording duration in seconds. When this limit is reached, the recording stops automatically and `RecordingEndReason` is set to `maxLength`.
+
+  **Allowed values:** integer > 0
+</ParamField>
+
+<ParamField body="timeout" type="integer" default="60">
+  Maximum time in seconds the recording can run. Unlike `maxLength`, this attribute does not set a hard duration limit — instead, it ends the recording after the specified number of seconds if no audio activity triggers an earlier stop. `RecordingEndReason` is set to `RecordingTimeout`.
+
+  **Allowed values:** integer > 0
+</ParamField>
+
+<ParamField body="playBeep" type="boolean" default="true">
+  When `true`, Vobiz plays a beep tone immediately before recording begins.
+</ParamField>
+
+<ParamField body="finishOnKey" type="string" default="1234567890*#">
+  Any key in this string ends the recording when pressed. Set to an empty string or `none` to disable key-based termination. `RecordingEndReason` is set to `FinishedOnKey`.
+
+  **Allowed values:** any combination of `0`–`9`, `*`, `#`
+</ParamField>
+
+<ParamField body="recordSession" type="boolean" default="false">
+  When `true`, records the entire call session including all `<Speak>` and `<Play>` segments. The recording ends only when the call is hung up, and `RecordingEndReason` is set to `HungUp`.
+</ParamField>
+
+<ParamField body="startOnDialAnswer" type="boolean" default="false">
+  When `true` and `<Record>` is nested inside `<Dial>`, recording starts as soon as the outbound call is answered.
+</ParamField>
+
+<ParamField body="redirect" type="boolean" default="false">
+  When `true`, Vobiz redirects the call to the `action` URL after recording and executes the returned XML. When `false`, the `action` URL is fetched but the call flow continues from the next XML element.
+</ParamField>
+
+<ParamField body="transcriptionType" type="string" default="auto">
+  Transcription service to use. Transcription is available at an additional cost.
+
+  - `auto` — Uses the default Vobiz transcription service.
+  - `hybrid` — Uses Vobiz for common languages and a third-party provider for others.
+</ParamField>
+
+<ParamField body="transcriptionUrl" type="string">
+  URL that receives the transcription once it is ready. Must be a fully qualified URL.
+</ParamField>
+
+<ParamField body="transcriptionMethod" type="string" default="POST">
+  HTTP method used when calling `transcriptionUrl`.
+
+  **Allowed values:** `GET`, `POST`
+</ParamField>
+
+<ParamField body="callbackUrl" type="string">
+  An alternative notification URL called when the recording ends and the recording file is ready for download. Receives the same parameters as the `action` URL.
+</ParamField>
+
+<ParamField body="callbackMethod" type="string" default="POST">
+  HTTP method used when calling `callbackUrl`.
+
+  **Allowed values:** `GET`, `POST`
+</ParamField>
+
+## Parameters sent to the action URL
+
+| Parameter | Type | Description |
+|---|---|---|
+| `RecordUrl` | string | URL of the recorded audio file. The file may take a few seconds to be available. Use `callbackUrl` if you need the file to be ready before processing. |
+| `RecordingDuration` | integer | Duration of the recording in seconds. |
+| `RecordingDurationMs` | integer | Duration of the recording in milliseconds. |
+| `RecordingStartMs` | integer | Timestamp when the recording started, in milliseconds. |
+| `RecordingEndMs` | integer | Timestamp when the recording ended, in milliseconds. |
+| `RecordingID` | string | Unique identifier for the recording. |
+| `RecordingEndReason` | string | Reason the recording stopped: `RecordingTimeout`, `maxLength`, `FinishedOnKey`, or `HungUp`. |
+
+## Parameters sent to the transcription URL
+
+| Parameter | Description |
+|---|---|
+| `transcription` | The full text of the transcription. |
+| `transcription_id` | Unique identifier for the transcription. |
+| `transcription_url` | URL of the transcription text file. |
+| `recording_id` | Unique identifier for the associated recording. |
+
+## Examples
+
+### Voicemail
+
+Prompt the caller to leave a message with a two-minute maximum.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak>Please leave a message after the beep. Press the pound key when finished.</Speak>
+    <Record
+        maxLength="120"
+        finishOnKey="#"
+        action="https://yourapp.com/voicemail-received"/>
+    <Speak>Your message has been saved. Goodbye!</Speak>
+    <Hangup/>
+</Response>
+```
+
+### Full-session recording
+
+Record the entire call from start to finish, including all spoken prompts and the caller's responses.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Record
+        recordSession="true"
+        fileFormat="wav"
+        action="https://yourapp.com/recording-complete"/>
+    <Speak>This call is being recorded for quality assurance.</Speak>
+    <Gather numDigits="1" timeout="10" action="https://yourapp.com/menu">
+        <Speak>Press 1 for sales, press 2 for support.</Speak>
+    </Gather>
+</Response>
+```
+
+### Recording with automatic transcription
+
+Record and transcribe in one step, receiving the transcript at a separate URL.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak>Please describe your issue after the beep.</Speak>
+    <Record
+        maxLength="180"
+        finishOnKey="#"
+        fileFormat="mp3"
+        transcriptionType="auto"
+        transcriptionUrl="https://yourapp.com/transcription-ready"
+        action="https://yourapp.com/recording-done"/>
+    <Hangup/>
+</Response>
+```
+
+### Outbound call with recording from answer
+
+Record the B-leg conversation starting as soon as the called party answers.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Dial action="https://yourapp.com/after-call">
+        <Number>+14155551234</Number>
+        <Record
+            startOnDialAnswer="true"
+            recordSession="true"
+            action="https://yourapp.com/recording-complete"/>
+    </Dial>
+</Response>
+```
+
+<Warning>
+  When you receive the `RecordUrl` parameter at your `action` URL, the file may not be immediately available for download. Use `callbackUrl` instead if your application needs to access the file right away.
+</Warning>

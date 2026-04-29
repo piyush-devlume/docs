@@ -1,0 +1,120 @@
+---
+title: "Speak Element: Text-to-Speech in Vobiz XML"
+description: "Use the Speak element to read dynamic text aloud to callers. Configure language, voice gender, and loop count to match your application's needs."
+sidebarTitle: "Speak"
+---
+
+The `<Speak>` element converts text to speech and plays it to the caller. Use it whenever you need to communicate dynamic content that cannot be prerecorded — such as account balances, confirmation numbers, or personalised greetings. Place the text you want spoken as the content of the element, and configure the voice, language, and loop count with attributes.
+
+## Attributes
+
+<ParamField body="voice" type="string" default="WOMAN">
+  The voice gender to use when reading the text.
+
+  **Allowed values:** `WOMAN`, `MAN`
+</ParamField>
+
+<ParamField body="language" type="string" default="en-US">
+  The language used to read the text. See the supported languages table below for all valid values.
+</ParamField>
+
+<ParamField body="loop" type="integer" default="1">
+  The number of times to read the text. Set to `0` to loop indefinitely.
+
+  **Allowed values:** integer ≥ 0
+</ParamField>
+
+## Supported languages and voices
+
+| Language | Code | Woman | Man |
+|---|---|:---:|:---:|
+| Danish | `da-DK` | ✓ | — |
+| Dutch | `nl-NL` | ✓ | ✓ |
+| English — Australian | `en-AU` | ✓ | ✓ |
+| English — British | `en-GB` | ✓ | ✓ |
+| English — USA | `en-US` | ✓ | ✓ |
+| French | `fr-FR` | ✓ | ✓ |
+| French — Canadian | `fr-CA` | ✓ | — |
+| German | `de-DE` | ✓ | ✓ |
+| Italian | `it-IT` | ✓ | ✓ |
+| Polish | `pl-PL` | ✓ | ✓ |
+| Portuguese | `pt-PT` | — | ✓ |
+| Portuguese — Brazilian | `pt-BR` | ✓ | ✓ |
+| Russian | `ru-RU` | ✓ | — |
+| Spanish | `es-ES` | ✓ | ✓ |
+| Spanish — USA | `es-US` | ✓ | ✓ |
+| Swedish | `sv-SE` | ✓ | — |
+
+## Examples
+
+### Basic greeting
+
+Use the defaults to read a simple message in a US English female voice.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak>Hello! Welcome to Vobiz telephony platform.</Speak>
+</Response>
+```
+
+### British male voice
+
+Override the voice and language to target a specific locale.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak voice="MAN" language="en-GB">
+        Thank you for calling. Please hold while we connect you.
+    </Speak>
+</Response>
+```
+
+### Multilingual IVR prompt
+
+Combine multiple `<Speak>` elements to address callers in different languages.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak language="en-US">Press 1 for English.</Speak>
+    <Speak language="es-ES">Pulse 2 para español.</Speak>
+    <Speak language="fr-FR">Appuyez sur 3 pour le français.</Speak>
+    <Gather numDigits="1" timeout="10" action="https://yourapp.com/language-choice"/>
+</Response>
+```
+
+### Looping hold message
+
+Repeat a message three times while waiting for a callback to complete.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak loop="3">
+        Thank you for your patience. Your call is important to us.
+    </Speak>
+</Response>
+```
+
+### Indefinite loop
+
+Set `loop="0"` to repeat indefinitely — useful when combined with a `<Gather>` that will interrupt playback as soon as the caller presses a key.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Gather numDigits="1" timeout="60" action="https://yourapp.com/input">
+        <Speak loop="0">Press any key to continue.</Speak>
+    </Gather>
+</Response>
+```
+
+<Warning>
+  Setting `loop="0"` without a `<Gather>` or similar element that can interrupt the loop will cause the call to stay in the `<Speak>` element indefinitely.
+</Warning>
+
+## Usage inside other elements
+
+You can nest `<Speak>` inside `<Gather>` and `<PreAnswer>` to prompt callers for input or to provide early-media ringback messages. Vobiz plays the nested `<Speak>` content while simultaneously listening for input, stopping playback as soon as the caller responds.

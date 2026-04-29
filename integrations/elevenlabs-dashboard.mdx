@@ -1,0 +1,132 @@
+---
+title: "Connect Vobiz to ElevenLabs Conversational AI"
+description: "Integrate Vobiz SIP trunking with ElevenLabs Conversational AI via the dashboard. Set up outbound and inbound AI calling in about 15 minutes."
+sidebarTitle: "ElevenLabs (dashboard)"
+---
+
+This guide shows you how to connect your Vobiz phone number to ElevenLabs Conversational AI so your agent can make and receive real phone calls with ultra-realistic voices. The entire setup is done through the ElevenLabs dashboard—no code required. Expect to finish in about 15 minutes.
+
+**Outbound call flow:**
+
+```text
+Your App → ElevenLabs Agent → Vobiz SIP → Phone Network → Person Answers → AI Agent Speaks
+```
+
+## Prerequisites
+
+Before you start, make sure you have:
+
+- A Vobiz account with an active SIP trunk — [sign up](https://console.vobiz.ai/auth/signup)
+- An ElevenLabs account — [sign up](https://elevenlabs.io)
+- An ElevenLabs agent already created — [create one](https://elevenlabs.io/app)
+- A phone number purchased from Vobiz (for caller ID)
+
+## Outbound calling setup
+
+### Step 1: Import your phone number
+
+<Steps>
+  <Step title="Open Phone Numbers">
+    Log in to the [ElevenLabs Dashboard](https://elevenlabs.io/app) and navigate to **Phone Numbers** in the sidebar.
+  </Step>
+  <Step title="Import from SIP Trunk">
+    Click **Import Number**, then select **Import from SIP Trunk**.
+  </Step>
+</Steps>
+
+### Step 2: Enter your phone number details
+
+On the next screen, fill in:
+
+| Field | Value |
+|---|---|
+| Label | A friendly name, e.g. `Vobiz Main Line` |
+| Phone Number | Your Vobiz number with country code, e.g. `+911234567890` |
+
+Click **Next** to continue to outbound configuration.
+
+### Step 3: Configure outbound SIP trunk settings
+
+Enter your Vobiz SIP trunk credentials. Find these in the [Vobiz Console](https://console.vobiz.ai) under **SIP Trunk → Outbound Trunks → Trunks → Your Trunk → Authentication & Linking**.
+
+| Field | Value |
+|---|---|
+| Transport Type | `TCP` |
+| Address (SIP Trunk Address) | Your Vobiz SIP domain, e.g. `<your_domain>.sip.vobiz.ai` |
+| SIP Trunk Username | Your Vobiz trunk username |
+| SIP Trunk Password | Your Vobiz trunk password |
+
+<Tip>
+The **Address** field expects only the domain portion of your SIP URI. Do not include `sip:` or a port number.
+</Tip>
+
+Click **Save** or **Import** to complete the outbound setup.
+
+### Step 4: Make your first call
+
+<Steps>
+  <Step title="Open Phone Numbers">
+    In the ElevenLabs Dashboard, navigate to **Phone Numbers** and select the number you just imported.
+  </Step>
+  <Step title="Start a call">
+    Click **Make Outbound Call**.
+  </Step>
+  <Step title="Configure the call">
+    | Field | Value |
+    |---|---|
+    | Agent | Select your ElevenLabs conversational AI agent |
+    | Destination number | Phone number to call with country code, e.g. `+919988776655` |
+  </Step>
+  <Step title="Dial">
+    Click **Call** or **Start Test Call**. The destination phone rings. When answered, your agent speaks the configured first message and the conversation begins.
+  </Step>
+</Steps>
+
+To verify a call completed successfully, go to **Agents Platform → Your Agent → Call History** and review transcripts and recordings.
+
+## Inbound calling setup
+
+Allow callers to reach your ElevenLabs agent by dialing your Vobiz number.
+
+### Step 1: Configure the inbound SIP URI in Vobiz
+
+In your Vobiz SIP trunk configuration or application Answer URL, set the inbound destination to:
+
+```text
+sip.rtc.elevenlabs.io:5060
+```
+
+Use TCP transport. This tells Vobiz to forward all inbound calls on your number to ElevenLabs.
+
+### Step 2: Import the number in ElevenLabs
+
+Go to [ElevenLabs Phone Numbers](https://elevenlabs.io/app/agents/phone-numbers) and click **Import from SIP Trunk**. Follow the same steps as the outbound setup above to import your Vobiz number.
+
+### Step 3: Attach the number to an agent
+
+In the Phone Numbers list, locate the number you imported and click **Attach**. Select the agent you want to answer inbound calls.
+
+To test, dial your Vobiz number from any phone. The selected ElevenLabs agent picks up and starts the conversation.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="SIP 408 Request Timeout">
+    Verify your Vobiz SIP trunk address is correct (e.g. `abc123def.sip.vobiz.ai`) and that transport is set to `TCP`. Check that the trunk status shows as `active` in the [Vobiz Console](https://console.vobiz.ai).
+  </Accordion>
+  <Accordion title="SIP authentication failed">
+    Verify the username and password in **Vobiz Console → Trunks**. Credentials are case-sensitive. Re-enter them in the ElevenLabs dashboard exactly as shown.
+  </Accordion>
+  <Accordion title="Call connects but no audio">
+    Ensure your ElevenLabs agent has a **First Message** configured and a valid voice selected. Test the voice in the ElevenLabs dashboard before placing a call. Check call logs in [ElevenLabs Dashboard](https://elevenlabs.io/app) for errors.
+  </Accordion>
+  <Accordion title="Call doesn't connect at all">
+    Use E.164 format for the destination number (`+919988776655` with `+`) or local format (`09988776655` without `+`). Confirm your Vobiz trunk is active and check CDR logs in the Vobiz Console for call attempts.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+- Customize your agent's voice, personality, prompts, and first message in the [ElevenLabs Dashboard](https://elevenlabs.io/app).
+- View call history, transcripts, and recordings under **Agents Platform → Your Agent → Call History**.
+- Monitor Vobiz balance and call records in the [Vobiz Console](https://console.vobiz.ai).

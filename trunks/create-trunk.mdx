@@ -1,0 +1,214 @@
+---
+title: "Create a Trunk — Provision a New SIP Trunk"
+description: "Create a new SIP trunk on Vobiz. Configure rate limits, transport, authentication references, and origination URIs in a single API call."
+sidebarTitle: "Create a trunk"
+---
+
+Use this endpoint to provision a new SIP trunk. Vobiz automatically assigns a unique `trunk_id` and generates a SIP domain in the format `{trunk_id}.sip.vobiz.ai`. Save the returned `trunk_id` — you need it for every subsequent trunk operation.
+
+<Note>
+Only `name` is required. All other fields are optional and can be set or updated later.
+</Note>
+
+## Request
+
+```
+POST https://api.vobiz.ai/api/v1/account/{auth_id}/trunks
+```
+
+**Headers**
+
+| Header | Value |
+|--------|-------|
+| `X-Auth-ID` | Your account Auth ID |
+| `X-Auth-Token` | Your account Auth Token |
+| `Content-Type` | `application/json` |
+
+## Parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account identifier. Must match the `X-Auth-ID` header.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Descriptive name for the trunk. Maximum 255 characters.
+</ParamField>
+
+<ParamField body="trunk_status" type="string">
+  Initial status of the trunk. Accepted values: `enabled`, `disabled`. Defaults to `enabled`.
+</ParamField>
+
+<ParamField body="secure" type="boolean">
+  Enable TLS/SRTP for encrypted SIP transport. Defaults to `false`.
+</ParamField>
+
+<ParamField body="trunk_direction" type="string">
+  Direction of calls the trunk supports. Values: `outbound`, `inbound`, `both`. Defaults to `outbound`.
+</ParamField>
+
+<ParamField body="trunk_domain" type="string">
+  Custom SIP domain for the trunk. If omitted, Vobiz auto-generates `{trunk_id}.sip.vobiz.ai`.
+</ParamField>
+
+<ParamField body="concurrent_calls_limit" type="integer">
+  Maximum simultaneous calls. Defaults to `10`.
+</ParamField>
+
+<ParamField body="cps_limit" type="integer">
+  Calls-per-second rate limit. Defaults to `5`.
+</ParamField>
+
+<ParamField body="transport" type="string">
+  SIP transport protocol. Values: `udp`, `tcp`. Defaults to `udp`.
+</ParamField>
+
+<ParamField body="ipacl_uuid" type="string">
+  UUID of an existing IP ACL to associate with this trunk.
+</ParamField>
+
+<ParamField body="credential_uuid" type="string">
+  UUID of an existing credential to associate with this trunk.
+</ParamField>
+
+<ParamField body="primary_uri_uuid" type="string">
+  UUID of the primary origination URI for outbound routing.
+</ParamField>
+
+<ParamField body="fallback_uri_uuid" type="string">
+  UUID of the fallback origination URI used when the primary is unreachable.
+</ParamField>
+
+<ParamField body="inbound_destination" type="string">
+  SIP URI to which inbound calls are forwarded (e.g., `sip:user@host.com`).
+</ParamField>
+
+## Response
+
+Returns the complete trunk object on success.
+
+<ResponseField name="trunk_id" type="string (UUID)">
+  Auto-generated unique identifier for the trunk. Save this value.
+</ResponseField>
+
+<ResponseField name="auth_id" type="string">
+  Your account identifier.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  The trunk name you provided.
+</ResponseField>
+
+<ResponseField name="trunk_domain" type="string">
+  Auto-generated SIP domain (`{trunk_id}.sip.vobiz.ai`) unless you specified a custom domain.
+</ResponseField>
+
+<ResponseField name="trunk_status" type="string">
+  Current status of the trunk.
+</ResponseField>
+
+<ResponseField name="created_at" type="string (ISO 8601)">
+  UTC timestamp of creation.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string (ISO 8601)">
+  UTC timestamp of last update. Matches `created_at` on a new trunk.
+</ResponseField>
+
+## Examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.vobiz.ai/api/v1/account/{Auth_ID}/trunks \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My SIP Trunk",
+    "trunk_status": "enabled",
+    "secure": false,
+    "trunk_direction": "outbound",
+    "trunk_domain": "sip.example.com",
+    "concurrent_calls_limit": 10,
+    "cps_limit": 5,
+    "transport": "udp",
+    "ipacl_uuid": "{ipAclId}",
+    "credential_uuid": "{credentialId}",
+    "primary_uri_uuid": "{primaryUriId}",
+    "fallback_uri_uuid": "{fallbackUriId}",
+    "inbound_destination": "sip:user@host.com"
+  }'
+```
+
+```python Python
+import requests
+
+url = "https://api.vobiz.ai/api/v1/account/{Auth_ID}/trunks"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+payload = {
+    "name": "My SIP Trunk",
+    "trunk_status": "enabled",
+    "trunk_direction": "outbound",
+    "concurrent_calls_limit": 10,
+    "cps_limit": 5,
+    "transport": "udp"
+}
+
+response = requests.post(url, json=payload, headers=headers)
+trunk = response.json()
+print(trunk["trunk_id"])
+```
+
+```javascript Node.js
+const response = await fetch(
+  "https://api.vobiz.ai/api/v1/account/{Auth_ID}/trunks",
+  {
+    method: "POST",
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      name: "My SIP Trunk",
+      trunk_status: "enabled",
+      trunk_direction: "outbound",
+      concurrent_calls_limit: 10,
+      cps_limit: 5,
+      transport: "udp"
+    })
+  }
+);
+
+const trunk = await response.json();
+console.log(trunk.trunk_id);
+```
+
+</CodeGroup>
+
+**Example response (201 Created)**
+
+```json
+{
+  "trunk_id": "aabbcc-dd-ee-ff-gg",
+  "auth_id": "MA_XYZ123",
+  "name": "My SIP Trunk",
+  "trunk_domain": "aabbcc.sip.vobiz.ai",
+  "trunk_status": "active",
+  "secure": false,
+  "trunk_direction": "outbound",
+  "concurrent_calls_limit": 10,
+  "cps_limit": 5,
+  "transport": "udp",
+  "created_at": "2025-11-03T14:09:12.08032875Z",
+  "updated_at": "2025-11-03T14:09:12.08032875Z"
+}
+```
+
+<Tip>
+After creating a trunk, add credentials or IP ACLs for authentication, then configure origination URIs for outbound routing before placing your first call.
+</Tip>

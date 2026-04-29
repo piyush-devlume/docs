@@ -1,0 +1,759 @@
+---
+title: "SIP Endpoints: Manage SIP Devices on Vobiz"
+description: "Create and manage SIP endpoints for IP phones, softphones, and SIP clients on Vobiz. Full CRUD with request params, response fields, and examples."
+sidebarTitle: "Overview"
+---
+
+A Vobiz SIP endpoint represents any device or application that uses the Session Initiation Protocol (SIP) to make and receive calls — IP desk phones, mobile softphones, WebRTC browser clients, or desktop applications. Each endpoint is assigned a unique SIP URI in the format `sip:{username}@sip.vobiz.ai` that external callers can use to reach it.
+
+Endpoints differ from SIP trunks. A trunk connects your account to a carrier or PBX system for bulk voice traffic. An endpoint represents a single registered SIP device or user on your account.
+
+**Base URL for all endpoint operations:**
+
+```
+https://api.vobiz.ai/api/v1/Account/{authID}/Endpoint/
+```
+
+**Authentication headers:**
+
+| Header | Value |
+|--------|-------|
+| `X-Auth-ID` | Your account Auth ID |
+| `X-Auth-Token` | Your account Auth Token |
+
+## SIP client configuration
+
+After creating an endpoint, configure your SIP client with these settings:
+
+| Setting | Value |
+|---------|-------|
+| SIP server | `sip.vobiz.ai` |
+| Domain | `sip.vobiz.ai` |
+| Username | `{endpoint_username}` |
+| Password | `{endpoint_password}` |
+| Port (UDP/TCP) | `5060` |
+| Port (TLS) | `5061` |
+
+For WebRTC applications, connect to `wss://sip.vobiz.ai:7443` using a short-lived JWT token obtained from the API.
+
+---
+
+## The endpoint object
+
+The endpoint object includes core identity fields, permission flags, and — when the endpoint is actively registered on a SIP client — live registration details.
+
+### Core fields
+
+<ResponseField name="endpoint_id" type="string">
+  Unique numeric identifier for the endpoint. Use this in all endpoint API operations.
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  SIP username. Alphanumeric characters only. Unique per account. **Cannot be changed after creation.**
+</ResponseField>
+
+<ResponseField name="alias" type="string">
+  Friendly display name. Accepts letters, numbers, hyphens, and underscores.
+</ResponseField>
+
+<ResponseField name="sip_uri" type="string">
+  Full SIP URI assigned to the endpoint. Format: `sip:{username}@sip.vobiz.ai`.
+</ResponseField>
+
+<ResponseField name="sip_registered" type="string">
+  Registration status. `"true"` if actively registered on a SIP client, `"false"` otherwise.
+</ResponseField>
+
+<ResponseField name="application" type="object">
+  Attached application for call routing. Contains `app_id`, `app_name`, `answer_url`, and `answer_method`. `null` if no application is attached.
+</ResponseField>
+
+<ResponseField name="sub_account" type="string">
+  Sub-account `auth_id` if the endpoint belongs to a sub-account. `null` for the main account.
+</ResponseField>
+
+<ResponseField name="resource_uri" type="string">
+  API resource path for this endpoint.
+</ResponseField>
+
+<ResponseField name="created_at" type="string (ISO 8601)">
+  UTC creation timestamp.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string (ISO 8601)">
+  UTC last-updated timestamp.
+</ResponseField>
+
+### Permission fields
+
+<ResponseField name="allow_voice" type="boolean">
+  Voice calls enabled. Default: `true`.
+</ResponseField>
+
+<ResponseField name="allow_message" type="boolean">
+  Messaging enabled. Default: `true`.
+</ResponseField>
+
+<ResponseField name="allow_video" type="boolean">
+  Video calls enabled. Default: `false`.
+</ResponseField>
+
+<ResponseField name="allow_same_domain" type="boolean">
+  Calls to endpoints on the same domain allowed. Default: `true`.
+</ResponseField>
+
+<ResponseField name="allow_other_domains" type="boolean">
+  Calls to other SIP domains allowed. Default: `false`.
+</ResponseField>
+
+<ResponseField name="allow_phones" type="boolean">
+  Calls to PSTN phone numbers allowed. Default: `true`.
+</ResponseField>
+
+<ResponseField name="allow_apps" type="boolean">
+  Calls to applications allowed. Default: `true`.
+</ResponseField>
+
+### Registration fields (present when registered)
+
+<ResponseField name="sip_contact" type="string">
+  Contact address of the registered SIP client (e.g., `192.168.1.100:5060`).
+</ResponseField>
+
+<ResponseField name="sip_expires" type="string (ISO 8601)">
+  Timestamp when the current SIP registration expires.
+</ResponseField>
+
+<ResponseField name="sip_user_agent" type="string">
+  User agent string reported by the SIP client (e.g., `"Zoiper v5.4.5"`).
+</ResponseField>
+
+<ResponseField name="sip_registration" type="object">
+  Detailed registration info returned by [Retrieve an Endpoint](#retrieve-an-endpoint). Contains `contact`, `expires`, `user_agent`, `received`, and `path`.
+</ResponseField>
+
+<Tabs>
+  <Tab title="Unregistered endpoint">
+    ```json
+    {
+      "api_id": "550e8400-e29b-41d4-a716-446655440000",
+      "endpoint_id": "87654322",
+      "username": "jane_smith",
+      "alias": "Jane's Mobile",
+      "sip_uri": "sip:jane_smith@sip.vobiz.ai",
+      "sip_registered": "false",
+      "sip_contact": null,
+      "sip_expires": null,
+      "sip_user_agent": null,
+      "application": null,
+      "allow_voice": true,
+      "allow_message": true,
+      "allow_video": false,
+      "allow_same_domain": true,
+      "allow_other_domains": false,
+      "allow_phones": true,
+      "allow_apps": true,
+      "sub_account": null,
+      "resource_uri": "/v1/Account/{Auth_ID}/Endpoint/87654322/",
+      "created_at": "2025-10-26T14:20:00Z",
+      "updated_at": "2025-10-26T14:20:00Z"
+    }
+    ```
+  </Tab>
+  <Tab title="Registered endpoint">
+    ```json
+    {
+      "api_id": "550e8400-e29b-41d4-a716-446655440000",
+      "endpoint_id": "87654321",
+      "username": "john_doe",
+      "alias": "John's Desktop Phone",
+      "sip_uri": "sip:john_doe@sip.vobiz.ai",
+      "sip_registered": "true",
+      "sip_contact": "192.168.1.100:5060",
+      "sip_expires": "2025-10-28T11:30:00Z",
+      "sip_user_agent": "Zoiper v5.4.5",
+      "application": {
+        "app_id": "12345678",
+        "app_name": "Customer Service App",
+        "answer_url": "https://example.com/answer",
+        "answer_method": "POST"
+      },
+      "allow_voice": true,
+      "allow_message": true,
+      "allow_video": false,
+      "allow_same_domain": true,
+      "allow_other_domains": false,
+      "allow_phones": true,
+      "allow_apps": true,
+      "sub_account": null,
+      "resource_uri": "/v1/Account/{Auth_ID}/Endpoint/87654321/",
+      "created_at": "2025-10-27T10:30:00Z",
+      "updated_at": "2025-10-28T09:15:00Z"
+    }
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Create an endpoint
+
+```
+POST https://api.vobiz.ai/api/v1/Account/{authID}/Endpoint/
+```
+
+### Parameters
+
+<ParamField body="username" type="string" required>
+  SIP username. Alphanumeric characters only. Must be unique within your account. Cannot be changed after creation.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  SIP password. Minimum 8 characters recommended.
+</ParamField>
+
+<ParamField body="alias" type="string">
+  Friendly display name for the endpoint.
+</ParamField>
+
+<ParamField body="application" type="integer">
+  Application ID to attach for incoming call routing. Use `null` for no application.
+</ParamField>
+
+<ParamField body="allow_voice" type="boolean">
+  Allow voice calls. Default: `true`.
+</ParamField>
+
+<ParamField body="allow_message" type="boolean">
+  Allow messaging. Default: `true`.
+</ParamField>
+
+<ParamField body="allow_video" type="boolean">
+  Allow video calls. Default: `false`.
+</ParamField>
+
+<ParamField body="allow_same_domain" type="boolean">
+  Allow calls to same-domain endpoints. Default: `true`.
+</ParamField>
+
+<ParamField body="allow_other_domains" type="boolean">
+  Allow calls to other SIP domains. Default: `false`.
+</ParamField>
+
+<ParamField body="allow_phones" type="boolean">
+  Allow calls to PSTN numbers. Default: `true`.
+</ParamField>
+
+<ParamField body="allow_apps" type="boolean">
+  Allow calls to applications. Default: `true`.
+</ParamField>
+
+<ParamField body="sub_account" type="string">
+  Sub-account `auth_id` if creating for a sub-account.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "john_doe",
+    "password": "SecurePassword123!",
+    "alias": "Johns Desktop Phone",
+    "application": 12345678,
+    "allow_voice": true,
+    "allow_message": true,
+    "allow_video": false,
+    "allow_same_domain": true,
+    "allow_other_domains": false,
+    "allow_phones": true,
+    "allow_apps": true
+  }'
+```
+
+```python Python
+import requests
+
+url = "https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+payload = {
+    "username": "john_doe",
+    "password": "SecurePassword123!",
+    "alias": "Johns Desktop Phone",
+    "allow_voice": True,
+    "allow_phones": True
+}
+
+response = requests.post(url, json=payload, headers=headers)
+endpoint = response.json()
+print(endpoint["endpoint_id"], endpoint["sip_uri"])
+```
+
+```javascript Node.js
+const response = await fetch(
+  "https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/",
+  {
+    method: "POST",
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      username: "john_doe",
+      password: "SecurePassword123!",
+      alias: "Johns Desktop Phone",
+      allow_voice: true,
+      allow_phones: true
+    })
+  }
+);
+
+const endpoint = await response.json();
+console.log(endpoint.endpoint_id, endpoint.sip_uri);
+```
+
+</CodeGroup>
+
+**Response (201 Created)**
+
+```json
+{
+  "api_id": "550e8400-e29b-41d4-a716-446655440000",
+  "message": "created",
+  "endpoint_id": "87654321",
+  "sip_uri": "sip:john_doe@sip.vobiz.ai",
+  "resource_uri": "/v1/Account/{Auth_ID}/Endpoint/87654321/"
+}
+```
+
+**Error (400 Bad Request)**
+
+```json
+{
+  "error": "invalid request parameters",
+  "details": {
+    "username": "This username already exists",
+    "password": "Password must be at least 8 characters"
+  }
+}
+```
+
+---
+
+## Retrieve an endpoint
+
+```
+GET https://api.vobiz.ai/api/v1/Account/{authID}/Endpoint/{endpointID}/
+```
+
+Returns the complete endpoint object. When the endpoint is actively registered, a `sip_registration` object with live registration details is included.
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/87654321/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+endpoint_id = "87654321"
+url = f"https://api.vobiz.ai/api/v1/Account/{{Auth_ID}}/Endpoint/{endpoint_id}/"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.get(url, headers=headers)
+endpoint = response.json()
+print(endpoint["sip_registered"], endpoint.get("sip_expires"))
+```
+
+```javascript Node.js
+const endpointId = "87654321";
+const response = await fetch(
+  `https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/${endpointId}/`,
+  {
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    }
+  }
+);
+
+const endpoint = await response.json();
+console.log(endpoint.sip_registered, endpoint.sip_expires);
+```
+
+</CodeGroup>
+
+**Response (200 OK)**
+
+```json
+{
+  "api_id": "550e8400-e29b-41d4-a716-446655440000",
+  "endpoint_id": "87654321",
+  "username": "john_doe",
+  "alias": "Johns Desktop Phone",
+  "sip_uri": "sip:john_doe@sip.vobiz.ai",
+  "sip_registered": "true",
+  "sip_registration": {
+    "contact": "192.168.1.100:5060",
+    "expires": "2025-10-28T11:30:00Z",
+    "user_agent": "Zoiper v5.4.5",
+    "received": "203.0.113.42:5060",
+    "path": null
+  },
+  "application": {
+    "app_id": "12345678",
+    "app_name": "Customer Service App",
+    "answer_url": "https://example.com/answer",
+    "answer_method": "POST"
+  },
+  "allow_voice": true,
+  "allow_message": true,
+  "allow_video": false,
+  "allow_same_domain": true,
+  "allow_other_domains": false,
+  "allow_phones": true,
+  "allow_apps": true,
+  "sub_account": null,
+  "resource_uri": "/v1/Account/{Auth_ID}/Endpoint/87654321/",
+  "created_at": "2025-10-27T10:30:00Z",
+  "updated_at": "2025-10-28T09:15:00Z"
+}
+```
+
+---
+
+## List all endpoints
+
+```
+GET https://api.vobiz.ai/api/v1/Account/{authID}/Endpoint/
+```
+
+### Query parameters
+
+<ParamField query="limit" type="integer">
+  Results per page. Maximum: `100`. Default: `20`.
+</ParamField>
+
+<ParamField query="offset" type="integer">
+  Results to skip. Default: `0`.
+</ParamField>
+
+<ParamField query="username__contains" type="string">
+  Filter by username partial match.
+</ParamField>
+
+<ParamField query="username__exact" type="string">
+  Filter by exact username.
+</ParamField>
+
+<ParamField query="username__startswith" type="string">
+  Filter by username prefix.
+</ParamField>
+
+<ParamField query="alias__contains" type="string">
+  Filter by alias partial match.
+</ParamField>
+
+<ParamField query="alias__exact" type="string">
+  Filter by exact alias.
+</ParamField>
+
+<ParamField query="application_id__exact" type="integer">
+  Filter by application ID.
+</ParamField>
+
+<ParamField query="application_id__isnull" type="boolean">
+  When `true`, return only endpoints without an application attached.
+</ParamField>
+
+<ParamField query="sub_account" type="string">
+  Filter by sub-account `auth_id`.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET "https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/?limit=20&offset=0" \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```bash cURL — filter by username
+curl -X GET "https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/?username__contains=john" \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+url = "https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+params = {"limit": 20, "offset": 0}
+
+response = requests.get(url, headers=headers, params=params)
+data = response.json()
+
+print(f"Total endpoints: {data['meta']['total_count']}")
+for ep in data["objects"]:
+    registered = ep["sip_registered"] == "true"
+    print(ep["endpoint_id"], ep["username"], "registered" if registered else "offline")
+```
+
+```javascript Node.js
+const response = await fetch(
+  "https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/?limit=20&offset=0",
+  {
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    }
+  }
+);
+
+const data = await response.json();
+console.log(`Total: ${data.meta.total_count}`);
+data.objects.forEach(ep => {
+  console.log(ep.endpoint_id, ep.username, ep.sip_registered);
+});
+```
+
+</CodeGroup>
+
+**Response (200 OK)**
+
+```json
+{
+  "api_id": "550e8400-e29b-41d4-a716-446655440000",
+  "meta": {
+    "limit": 20,
+    "offset": 0,
+    "total_count": 2
+  },
+  "objects": [
+    {
+      "endpoint_id": "87654321",
+      "username": "john_doe",
+      "alias": "Johns Desktop Phone",
+      "sip_uri": "sip:john_doe@sip.vobiz.ai",
+      "sip_registered": "true",
+      "sip_contact": "192.168.1.100:5060",
+      "sip_expires": "2025-10-28T11:30:00Z",
+      "sip_user_agent": "Zoiper v5.4.5",
+      "allow_voice": true,
+      "allow_phones": true,
+      "resource_uri": "/v1/Account/{Auth_ID}/Endpoint/87654321/"
+    },
+    {
+      "endpoint_id": "87654322",
+      "username": "jane_smith",
+      "alias": "Janes Mobile",
+      "sip_uri": "sip:jane_smith@sip.vobiz.ai",
+      "sip_registered": "false",
+      "sip_contact": null,
+      "sip_expires": null,
+      "sip_user_agent": null,
+      "allow_voice": true,
+      "allow_phones": true,
+      "resource_uri": "/v1/Account/{Auth_ID}/Endpoint/87654322/"
+    }
+  ]
+}
+```
+
+---
+
+## Update an endpoint
+
+Update a password, alias, or attached application. Some fields are locked after creation.
+
+```
+POST https://api.vobiz.ai/api/v1/Account/{authID}/Endpoint/{endpointID}/
+```
+
+<Note>
+The update endpoint uses `POST`, not `PUT`. The following fields cannot be changed after creation: `username`, `endpoint_id`, `domain`, `allow_same_domain`, `allow_other_domains`, `allow_phones`, `allow_apps`. Create a new endpoint and delete the old one if you need to change these.
+</Note>
+
+### Parameters
+
+All parameters are optional.
+
+<ParamField body="password" type="string">
+  New SIP password. Minimum 8 characters.
+</ParamField>
+
+<ParamField body="alias" type="string">
+  Updated friendly display name.
+</ParamField>
+
+<ParamField body="application" type="integer">
+  New application ID for incoming call routing.
+</ParamField>
+
+<ParamField body="allow_voice" type="boolean">
+  Enable or disable voice calls.
+</ParamField>
+
+<ParamField body="allow_message" type="boolean">
+  Enable or disable messaging.
+</ParamField>
+
+<ParamField body="allow_video" type="boolean">
+  Enable or disable video calls.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL — update alias
+curl -X POST https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/87654321/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"alias": "Johns Updated Desk Phone"}'
+```
+
+```bash cURL — rotate password
+curl -X POST https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/87654321/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"password": "NewSecurePassword456!"}'
+```
+
+```python Python
+import requests
+
+endpoint_id = "87654321"
+url = f"https://api.vobiz.ai/api/v1/Account/{{Auth_ID}}/Endpoint/{endpoint_id}/"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+payload = {
+    "alias": "Johns Updated Desk Phone",
+    "password": "NewSecurePassword456!",
+    "application": 98765432
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print("Updated" if response.status_code == 202 else response.text)
+```
+
+```javascript Node.js
+const endpointId = "87654321";
+const response = await fetch(
+  `https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/${endpointId}/`,
+  {
+    method: "POST",
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      alias: "Johns Updated Desk Phone",
+      allow_video: true
+    })
+  }
+);
+
+if (response.status === 202) {
+  console.log("Endpoint updated.");
+}
+```
+
+</CodeGroup>
+
+Returns `202 Accepted` on success with no response body. After updating a password, SIP clients using this endpoint will need to re-register with the new credentials.
+
+---
+
+## Delete an endpoint
+
+Permanently remove a SIP endpoint from your account.
+
+```
+DELETE https://api.vobiz.ai/api/v1/Account/{authID}/Endpoint/{endpointID}/
+```
+
+<Warning>
+Deleting an endpoint immediately unregisters it from all SIP clients and makes the SIP URI permanently unavailable. This action cannot be reversed.
+</Warning>
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/87654321/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+endpoint_id = "87654321"
+url = f"https://api.vobiz.ai/api/v1/Account/{{Auth_ID}}/Endpoint/{endpoint_id}/"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.delete(url, headers=headers)
+if response.status_code == 204:
+    print("Endpoint deleted.")
+```
+
+```javascript Node.js
+const endpointId = "87654321";
+const response = await fetch(
+  `https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Endpoint/${endpointId}/`,
+  {
+    method: "DELETE",
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    }
+  }
+);
+
+if (response.status === 204) {
+  console.log("Endpoint deleted.");
+}
+```
+
+</CodeGroup>
+
+| Status | Meaning |
+|--------|---------|
+| `204 No Content` | Endpoint deleted successfully. |
+| `404 Not Found` | Endpoint does not exist or was already deleted. |
+
+---
+
+## Best practices
+
+- Use strong passwords (8+ characters, mixed case, numbers, and symbols).
+- Use descriptive `alias` values to identify endpoints in dashboards and logs (e.g., `sales-desk-nyc-01`).
+- Only enable the permissions (`allow_voice`, `allow_video`, etc.) that the endpoint actually needs.
+- Attach an application to endpoints that handle inbound calls for automatic routing.
+- Monitor the `sip_registered` field to detect offline devices and troubleshoot registration issues.
+- Remove unused endpoints to keep your account organized and reduce the attack surface.

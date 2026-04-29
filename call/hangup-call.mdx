@@ -1,0 +1,92 @@
+---
+title: "Hang Up a Call with the Vobiz API"
+description: "Terminate an active or queued call programmatically using a DELETE request. Triggers the hangup_url callback and generates a final CDR."
+---
+
+Use this endpoint to immediately terminate any in-progress call on your account. Send a `DELETE` request with the call's UUID, and Vobiz will hang up the call, generate a final CDR, and invoke your `hangup_url` callback if one was configured when the call was initiated.
+
+```
+DELETE https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/
+```
+
+<Warning>
+  This action permanently terminates the call and cannot be undone. Ensure you are targeting the correct `call_uuid` before sending the request.
+</Warning>
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account Auth ID.
+</ParamField>
+
+<ParamField path="call_uuid" type="string" required>
+  Unique identifier of the call to terminate. Retrieve this from the response to [Make a Call](/call/make-call) or from [Retrieve All Live Calls](/call/retrieve-all-live-calls).
+</ParamField>
+
+## Request body
+
+No request body is required. Send the `DELETE` request to the endpoint URL with authentication headers only.
+
+## Response
+
+A successful hangup returns HTTP `204 No Content` with an empty body.
+
+<Note>
+  After the call is hung up, the final CDR sets `hangup_source` to `"API"` and `hangup_cause_code` to `16` (`NORMAL_CLEARING`).
+</Note>
+
+## Code examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE \
+  https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+call_uuid = "CALL_UUID_TO_HANG_UP"
+
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.delete(url, headers=headers)
+
+if response.status_code == 204:
+    print("Call terminated successfully.")
+else:
+    print(f"Error: {response.status_code}", response.text)
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const callUuid = "CALL_UUID_TO_HANG_UP";
+
+await axios.delete(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Call/${callUuid}/`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    }
+  }
+);
+
+console.log("Call terminated successfully.");
+```
+
+</CodeGroup>
+
+<Tip>
+  After hanging up, retrieve the final call details using the call UUID to access duration and billing information from the CDR.
+</Tip>

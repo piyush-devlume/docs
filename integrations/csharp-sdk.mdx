@@ -1,0 +1,116 @@
+---
+title: "Vobiz C# / .NET SDK — installation and usage"
+description: "Install and use the Vobiz C# SDK for .NET. Configure DI, make outbound calls, build fluent VobizXML call flows, and query live call state from C#."
+sidebarTitle: "C# / .NET SDK"
+---
+
+The official Vobiz C# SDK provides a .NET-native interface to the Vobiz Voice API. It uses standard dependency injection (DI), making it a natural fit for ASP.NET Core applications. Use it to make outbound calls, build VobizXML call flows with a fluent API, query live call state, and handle DTMF input.
+
+**Source code:** [vobiz-ai/Vobiz-Csharp-sdk](https://github.com/vobiz-ai/Vobiz-Csharp-sdk)
+
+## Installation
+
+Clone the repository and build the project:
+
+```bash
+git clone https://github.com/vobiz-ai/Vobiz-Csharp-sdk.git
+cd Vobiz-Csharp-sdk
+dotnet build
+```
+
+## Authentication
+
+The SDK uses .NET dependency injection to register your credentials. Configure the host at application startup:
+
+```csharp
+using Microsoft.Extensions.Hosting;
+using Vobiz.Client;
+using Vobiz.Extensions;
+
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureApi((context, services, options) =>
+    {
+        options.AddTokens(new ApiKeyToken("YOUR_AUTH_ID", ClientUtils.ApiKeyHeader.X_Auth_ID, ""));
+        options.AddTokens(new ApiKeyToken("YOUR_AUTH_TOKEN", ClientUtils.ApiKeyHeader.X_Auth_Token, ""));
+    })
+    .Build();
+```
+
+## Quick start: fetch account details
+
+Resolve the API interface from the DI container and call the account endpoint. Substitute `ICallApi` to control calls programmatically.
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Vobiz.Api;
+
+var accountApi = host.Services.GetRequiredService<IAccountApi>();
+
+var me = await accountApi.ApiV1AuthMeGetAsync(
+    xAuthID: "YOUR_AUTH_ID",
+    xAuthToken: "YOUR_AUTH_TOKEN",
+    contentType: "application/json"
+);
+
+Console.WriteLine(me.StatusCode);
+```
+
+## Building call flows with VobizXML
+
+The `Vobiz.Xml` namespace provides a fluent builder for VobizXML. Chain method calls to compose multi-step responses, then call `ToString()` to get the XML string for your webhook response.
+
+```csharp
+using Vobiz.Xml;
+
+var response = new ResponseElement()
+    .AddSpeak("Welcome to Vobiz.", voice: "WOMAN", language: "en-US")
+    .AddWait(length: 2)
+    .AddHangup();
+
+var xml = response.ToString(pretty: true);
+Console.WriteLine(xml);
+```
+
+## Query live call state
+
+Retrieve queued outbound calls via the strongly typed call API:
+
+```csharp
+var callApi = host.Services.GetRequiredService<ICallApi>();
+
+var response = await callApi.ApiV1AccountAuthIdCallGetAsync(
+    authId: "YOUR_AUTH_ID",
+    xAuthID: "YOUR_AUTH_ID",
+    xAuthToken: "YOUR_AUTH_TOKEN",
+    contentType: "application/json",
+    status: "queued"
+);
+
+Console.WriteLine(response.StatusCode);
+```
+
+## Gather input orchestration
+
+Build a `<Gather>` element for collecting DTMF or speech input:
+
+```csharp
+using Vobiz.Xml;
+
+var gather = new GatherElement(
+    action: "https://example.com/gather",
+    method: "POST",
+    inputType: "speech",
+    executionTimeout: 15
+)
+.AddSpeak("Say sales or support")
+.AddPlay("https://example.com/menu.mp3");
+
+var response = new ResponseElement().Add(gather);
+Console.WriteLine(response.ToString(false));
+```
+
+## Next steps
+
+- See the [Node.js SDK](/integrations/node-sdk) or [Python SDK](/integrations/python-sdk) for equivalent examples in other languages.
+- See the [IVR example](/examples/vobiz-ivr-xml-python) for multi-level `<Gather>` call flow patterns (the Python example shows the same XML structure).
+- Use the [WebSockets guide](/integrations/websockets) to understand how to stream live audio to an AI agent from any backend.

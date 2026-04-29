@@ -1,0 +1,88 @@
+---
+title: "Hang up and terminate a specific conference"
+description: "Disconnect all participants from a named conference and close the room immediately. The conference cannot be resumed after it is terminated."
+sidebarTitle: "Hang up conference"
+---
+
+Use this endpoint to terminate a specific conference by name. All participants are disconnected immediately and any ongoing recordings are stopped and finalized. The conference room is closed and cannot be rejoined.
+
+**DELETE** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/`
+
+<Warning>
+  This action immediately disconnects all participants without warning. The conference cannot be resumed once terminated. Handle 404 responses gracefully in your application, as the conference may have ended naturally between your check and the deletion request.
+</Warning>
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+<ParamField path="conference_name" type="string" required>
+  Name of the conference to terminate. URL-encode spaces and special characters (e.g., `My Conf Room` → `My%20Conf%20Room`).
+</ParamField>
+
+No request body is required.
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/My%20Conf%20Room/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+from urllib.parse import quote
+
+auth_id = "YOUR_AUTH_ID"
+conference_name = quote("My Conf Room")
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.delete(url, headers=headers)
+# Successful termination returns 204 No Content
+print(response.status_code)
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const conferenceName = encodeURIComponent("My Conf Room");
+
+const response = await axios.delete(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Conference/${conferenceName}/`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    },
+  }
+);
+
+// Successful termination returns HTTP 204
+console.log(response.status);
+```
+
+</CodeGroup>
+
+## Response
+
+A successful termination returns **HTTP 204 No Content** with no response body.
+
+After termination:
+- All participants are immediately disconnected
+- The conference room is closed and cannot be rejoined
+- Any ongoing recordings are stopped and finalized
+- The conference no longer appears in the active conferences list
+
+<Tip>
+  If you only need to remove specific participants, use the hang-up member or kick member operations from the [Conference Members](/conference/members) reference instead of terminating the entire conference.
+</Tip>

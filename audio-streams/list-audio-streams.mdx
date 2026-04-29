@@ -1,0 +1,144 @@
+---
+title: "List All Audio Streams on a Call"
+sidebarTitle: "List audio streams"
+description: "Retrieve all audio streams — active and stopped — associated with a given call. Supports pagination via limit and offset query parameters."
+---
+
+Use this endpoint to retrieve every Stream object associated with a call, including both streams that are currently in progress and streams that have already stopped during the call's lifetime.
+
+## Endpoint
+
+```
+GET https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Stream/
+```
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account authentication ID.
+</ParamField>
+
+<ParamField path="call_uuid" type="string" required>
+  UUID of the call whose streams you want to list.
+</ParamField>
+
+## Query parameters
+
+<ParamField query="limit" type="integer" default="20">
+  Maximum number of stream objects to return per page.
+</ParamField>
+
+<ParamField query="offset" type="integer" default="0">
+  Number of stream objects to skip before returning results. Use with `limit` for pagination.
+</ParamField>
+
+## Response
+
+Returns HTTP `200 OK` with a paginated list of Stream objects.
+
+<ResponseField name="page" type="integer">
+  Current page number.
+</ResponseField>
+
+<ResponseField name="per_page" type="integer">
+  Number of objects returned on this page.
+</ResponseField>
+
+<ResponseField name="total" type="integer">
+  Total number of streams associated with the call.
+</ResponseField>
+
+<ResponseField name="objects" type="array">
+  Array of Stream objects.
+
+  <Expandable title="Stream object fields">
+    <ResponseField name="stream_id" type="string">
+      Unique identifier for the stream.
+    </ResponseField>
+    <ResponseField name="call_uuid" type="string">
+      UUID of the call this stream is attached to.
+    </ResponseField>
+    <ResponseField name="service_url" type="string">
+      WebSocket URL receiving the forked audio.
+    </ResponseField>
+    <ResponseField name="status_callback_url" type="string">
+      URL called on stream lifecycle events.
+    </ResponseField>
+    <ResponseField name="bidirectional" type="boolean">
+      Whether the stream allows audio to be sent back into the call.
+    </ResponseField>
+    <ResponseField name="audio_track" type="string">
+      Track being forked: `inbound`, `outbound`, or `both`.
+    </ResponseField>
+    <ResponseField name="content_type" type="string">
+      Audio encoding format and sample rate (e.g. `audio/x-l16;rate=16000`).
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Current stream status: `in-progress`, `completed`, or `failed`.
+    </ResponseField>
+    <ResponseField name="start_time" type="string">
+      ISO 8601 timestamp when the stream started.
+    </ResponseField>
+    <ResponseField name="end_time" type="string">
+      ISO 8601 timestamp when the stream ended. `null` if still active.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+```json
+{
+  "page": 1,
+  "per_page": 10,
+  "total": 1,
+  "objects": [
+    {
+      "stream_id": "728e273b-9c2c-4902-8509-2f88224cd3d5",
+      "call_uuid": "c6ebf396-59c2-4f2a-8771-fbb5d981e301",
+      "service_url": "wss://your-server.com/ws",
+      "status_callback_url": "https://your-server.com/stream-status",
+      "bidirectional": true,
+      "audio_track": "both",
+      "content_type": "audio/x-l16;rate=16000",
+      "status": "in-progress",
+      "start_time": "2026-04-24T09:25:00Z",
+      "end_time": null
+    }
+  ]
+}
+```
+
+## Code examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET \
+  'https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Stream/?limit=10' \
+  -H 'X-Auth-ID: {auth_id}' \
+  -H 'X-Auth-Token: {auth_token}'
+```
+
+```python Python
+import requests
+
+AUTH_ID = "{auth_id}"
+AUTH_TOKEN = "{auth_token}"
+CALL_UUID = "{call_uuid}"
+
+url = f"https://api.vobiz.ai/api/v1/Account/{AUTH_ID}/Call/{CALL_UUID}/Stream/"
+
+headers = {
+    "X-Auth-ID": AUTH_ID,
+    "X-Auth-Token": AUTH_TOKEN,
+}
+
+params = {"limit": 10, "offset": 0}
+
+response = requests.get(url, headers=headers, params=params)
+data = response.json()
+
+for stream in data.get("objects", []):
+    print(stream["stream_id"], stream["status"])
+```
+
+</CodeGroup>

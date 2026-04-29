@@ -1,0 +1,141 @@
+---
+title: "The Vobiz Application object reference"
+description: "Detailed reference for all fields on the Application object, including webhook URLs, HTTP methods, SIP settings, and default behavior flags."
+sidebarTitle: "Application object"
+---
+
+An Application is a configuration object that tells Vobiz how to handle incoming calls and messages. It stores the webhook URLs Vobiz calls when events occur on your numbers, along with the HTTP method for each URL and flags that control default routing behavior. When you attach an Application to a phone number or SIP endpoint, Vobiz uses the Application's settings to route that number's calls.
+
+## Attributes
+
+<ResponseField name="app_id" type="string">
+  Unique identifier for the application.
+</ResponseField>
+
+<ResponseField name="app_name" type="string">
+  Name of the application. Allowed characters: letters (upper and lower case), digits (0–9), hyphens (`-`), and underscores (`_`).
+</ResponseField>
+
+<ResponseField name="answer_url" type="string">
+  URL Vobiz requests when a call is answered. Your server must return valid Vobiz XML to control the call flow.
+</ResponseField>
+
+<ResponseField name="answer_method" type="string">
+  HTTP method used to call `answer_url`. Values: `GET`, `POST`.
+</ResponseField>
+
+<ResponseField name="hangup_url" type="string">
+  URL Vobiz notifies when a call ends. Useful for analytics and cleanup operations. Defaults to `answer_url` if not set.
+</ResponseField>
+
+<ResponseField name="hangup_method" type="string">
+  HTTP method used to call `hangup_url`. Values: `GET`, `POST`.
+</ResponseField>
+
+<ResponseField name="fallback_answer_url" type="string">
+  Backup URL invoked if `answer_url` is unavailable or returns invalid XML.
+</ResponseField>
+
+<ResponseField name="fallback_method" type="string">
+  HTTP method used to call `fallback_answer_url`. Values: `GET`, `POST`.
+</ResponseField>
+
+<ResponseField name="message_url" type="string">
+  URL Vobiz notifies when an inbound SMS message is received. Vobiz expects an HTTP 200 response.
+</ResponseField>
+
+<ResponseField name="message_method" type="string">
+  HTTP method used to call `message_url`. Values: `GET`, `POST`.
+</ResponseField>
+
+<ResponseField name="default_number_app" type="boolean">
+  When `true`, newly created phone numbers that do not have an explicit `app_id` are automatically associated with this application.
+</ResponseField>
+
+<ResponseField name="default_endpoint_app" type="boolean">
+  When `true`, newly created SIP endpoints that do not have an explicit `app_id` are automatically associated with this application.
+</ResponseField>
+
+<ResponseField name="application_type" type="string">
+  The type of application (e.g., `voice`, `messaging`).
+</ResponseField>
+
+<ResponseField name="default_app" type="boolean">
+  Whether this is the default application for the account.
+</ResponseField>
+
+<ResponseField name="enabled" type="boolean">
+  Whether the application is enabled.
+</ResponseField>
+
+<ResponseField name="log_incoming_message" type="boolean">
+  Whether incoming messages to numbers associated with this application are logged in Vobiz systems.
+</ResponseField>
+
+<ResponseField name="public_uri" type="boolean">
+  Whether the application has a public SIP URI.
+</ResponseField>
+
+<ResponseField name="sip_uri" type="string">
+  SIP URI associated with the application (e.g., `sip:12345678@vobiz.ai`). Applications can be called directly via SIP without attaching them to a number.
+</ResponseField>
+
+<ResponseField name="sip_transfer_url" type="string">
+  URL notified during a SIP transfer.
+</ResponseField>
+
+<ResponseField name="sip_transfer_method" type="string">
+  HTTP method used for SIP transfer callbacks.
+</ResponseField>
+
+<ResponseField name="sub_account" type="string">
+  Sub-account `auth_id` associated with this application. `null` for main account applications.
+</ResponseField>
+
+<ResponseField name="resource_uri" type="string">
+  API resource URI for this application.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp of creation.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 timestamp of last update.
+</ResponseField>
+
+## Example object
+
+```json
+{
+  "api_id": "api_v1_XXXXXX",
+  "app_id": "12345678",
+  "app_name": "My Voice Application",
+  "application_type": "voice",
+  "enabled": true,
+  "default_app": false,
+  "answer_url": "https://example.com/answer",
+  "answer_method": "POST",
+  "hangup_url": "https://example.com/hangup",
+  "hangup_method": "POST",
+  "fallback_answer_url": "https://example.com/fallback",
+  "fallback_method": "POST",
+  "message_url": "https://example.com/message",
+  "message_method": "POST",
+  "log_incoming_message": true,
+  "public_uri": false,
+  "sip_transfer_method": "POST",
+  "sip_transfer_url": "https://example.com/sip-transfer",
+  "sip_uri": "sip:12345678@vobiz.ai",
+  "default_number_app": false,
+  "default_endpoint_app": false,
+  "sub_account": null,
+  "resource_uri": "/v1/Account/MA_XXXXXX/Application/12345678/",
+  "created_at": "2025-10-28T10:30:00Z",
+  "updated_at": "2025-10-28T10:30:00Z"
+}
+```
+
+<Tip>
+  All webhook URLs (`answer_url`, `hangup_url`, etc.) must use HTTPS. Your `answer_url` must respond within 10 seconds to avoid call timeout. Always configure a `fallback_answer_url` for production applications.
+</Tip>

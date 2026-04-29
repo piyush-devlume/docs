@@ -1,0 +1,83 @@
+---
+title: "Stop a Specific Audio Stream by ID"
+sidebarTitle: "Stop an audio stream"
+description: "DELETE a specific audio stream by stream ID on a live call. Other streams on the same call continue running unaffected after this operation."
+---
+
+Use this endpoint to stop a specific audio stream identified by its `stream_id`. Other streams running on the same call continue unaffected. Once stopped, Vobiz closes the WebSocket connection for that stream and sends a `Stream stopped` status callback if you configured a `status_callback_url`.
+
+## Endpoint
+
+```
+DELETE https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Stream/{stream_id}/
+```
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account authentication ID.
+</ParamField>
+
+<ParamField path="call_uuid" type="string" required>
+  UUID of the call the stream is attached to.
+</ParamField>
+
+<ParamField path="stream_id" type="string" required>
+  Unique ID of the stream to stop. Returned by the [Start an audio stream](/audio-streams/start-audio-stream) endpoint.
+</ParamField>
+
+## Response
+
+A successful request returns **HTTP 204 No Content** with an empty response body.
+
+If the specified stream does not exist, the API returns HTTP 404:
+
+```json
+{
+  "api_id": "correlation-id-uuid",
+  "error": "Stream not found"
+}
+```
+
+## Code examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE \
+  'https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Stream/{stream_id}/' \
+  -H 'X-Auth-ID: {auth_id}' \
+  -H 'X-Auth-Token: {auth_token}'
+```
+
+```python Python
+import requests
+
+AUTH_ID = "{auth_id}"
+AUTH_TOKEN = "{auth_token}"
+CALL_UUID = "{call_uuid}"
+STREAM_ID = "{stream_id}"
+
+url = (
+    f"https://api.vobiz.ai/api/v1/Account/{AUTH_ID}"
+    f"/Call/{CALL_UUID}/Stream/{STREAM_ID}/"
+)
+
+headers = {
+    "X-Auth-ID": AUTH_ID,
+    "X-Auth-Token": AUTH_TOKEN,
+}
+
+response = requests.delete(url, headers=headers)
+
+if response.status_code == 204:
+    print("Stream stopped successfully.")
+else:
+    print(response.json())
+```
+
+</CodeGroup>
+
+<Note>
+  To stop every active stream on a call in a single request, send a `DELETE` to the collection URL without a `stream_id`: `DELETE /Account/{auth_id}/Call/{call_uuid}/Stream/`
+</Note>

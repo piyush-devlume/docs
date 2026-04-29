@@ -1,0 +1,106 @@
+---
+title: "Build an AI voice agent with Vobiz telephony"
+description: "Connect Vobiz SIP trunking to VAPI, Retell AI, ElevenLabs, LiveKit, and Pipecat to build inbound and outbound AI phone agents in minutes."
+sidebarTitle: "AI voice agent"
+---
+
+Vobiz provides the telephony layer—real phone numbers, SIP trunking, and call routing—so you can wire any conversational AI platform directly to the public phone network without managing WebRTC streams yourself. This guide explains how the architecture works and points you to the integration guide for each supported platform.
+
+## How it works
+
+An AI voice agent built on Vobiz consists of three layers working together:
+
+1. **Telecom layer (Vobiz):** Owns the phone number (DID), terminates inbound calls, originates outbound calls, and manages the SIP session lifecycle.
+2. **Interconnect:** Vobiz forwards audio to your AI platform via a SIP URI or a bidirectional WebSocket media stream (`<Connect><Stream>`).
+3. **AI layer:** The AI provider runs speech-to-text (STT), sends context to an LLM, generates a response, and converts it back to audio with text-to-speech (TTS) before streaming it to the caller.
+
+<Info>
+You do not need to write any low-level audio code for SIP-based integrations (VAPI, Retell AI, ElevenLabs, LiveKit). Vobiz handles all RTP media handling. WebSocket-based integrations (Pipecat, raw WebSocket) give you byte-level control when you need it.
+</Info>
+
+## Prerequisites
+
+Before setting up your first agent, make sure you have:
+
+- An active [Vobiz account](https://console.vobiz.ai/auth/signup) with account balance loaded
+- At least one phone number purchased in the Vobiz Console
+- An account with your chosen AI voice platform (see below)
+
+## Choose your AI platform
+
+Select the platform that fits your stack. Each guide walks you through the full setup from creating a SIP trunk in Vobiz to placing a test call.
+
+<CardGroup cols={2}>
+  <Card title="VAPI" icon="phone" href="/integrations/vapi-dashboard">
+    Low-latency conversational AI via SIP. Dashboard setup, no code required.
+  </Card>
+  <Card title="Retell AI" icon="phone" href="/integrations/retellai-dashboard">
+    Natural-sounding AI phone conversations. Configure via the Retell dashboard.
+  </Card>
+  <Card title="ElevenLabs" icon="phone" href="/integrations/elevenlabs-dashboard">
+    Ultra-realistic AI voice agents. Import your Vobiz number in minutes.
+  </Card>
+  <Card title="LiveKit" icon="code" href="/integrations/livekit">
+    Open-source WebRTC + SIP. Full Python code examples for inbound and outbound.
+  </Card>
+  <Card title="Pipecat" icon="code" href="/integrations/pipecat">
+    Open-source Python voice AI framework. WebSocket media streaming.
+  </Card>
+  <Card title="Bolna" icon="code" href="/integrations/bolna">
+    Production-ready AI voice platform. Connect via the Bolna dashboard.
+  </Card>
+  <Card title="Ultravox" icon="code" href="/integrations/ultravox">
+    Multimodal AI. Outbound calls via SIP INVITE from Ultravox to Vobiz.
+  </Card>
+  <Card title="OpenAI Realtime" icon="code" href="/integrations/openai-realtime">
+    Connect Vobiz SIP directly to the OpenAI Realtime API via webhook.
+  </Card>
+</CardGroup>
+
+## Setup overview
+
+Every integration follows the same four steps regardless of platform:
+
+<Steps>
+  <Step title="Create a SIP trunk in Vobiz">
+    Log in to the [Vobiz Console](https://console.vobiz.ai) and navigate to **SIP Trunk → Outbound Trunks → Trunks**. Create a trunk and copy the **SIP domain**, **username**, and **password** from the Authentication & Linking section. You will paste these values into your AI platform.
+  </Step>
+  <Step title="Configure your AI platform">
+    Follow the platform-specific guide linked above. You will enter your Vobiz SIP domain and credentials so the AI platform can route calls through Vobiz.
+  </Step>
+  <Step title="Link your phone number">
+    In the Vobiz Console, purchase a phone number and associate it with your SIP trunk. For inbound calling, set the trunk's inbound destination to the SIP URI provided by your AI platform.
+  </Step>
+  <Step title="Test the call">
+    Place or receive a test call. Verify that audio flows end-to-end and check call records in both the Vobiz Console and your AI platform dashboard.
+  </Step>
+</Steps>
+
+## SDK and code-first options
+
+If you prefer to configure everything programmatically rather than through dashboards, use the official Vobiz SDKs or the REST API directly.
+
+<CardGroup cols={3}>
+  <Card title="Node.js SDK" href="/integrations/node-sdk">Make calls and manage trunks from JavaScript or TypeScript.</Card>
+  <Card title="Python SDK" href="/integrations/python-sdk">Make calls and build XML call flows from Python.</Card>
+  <Card title="Go SDK" href="/integrations/go-sdk">High-performance Vobiz integration in Go.</Card>
+  <Card title="Ruby SDK" href="/integrations/ruby-sdk">Voice capabilities for Ruby on Rails applications.</Card>
+  <Card title="C# SDK" href="/integrations/csharp-sdk">Enterprise .NET applications with Vobiz.</Card>
+  <Card title="WebSockets" href="/integrations/websockets">Raw bidirectional audio streaming without Pipecat.</Card>
+</CardGroup>
+
+## Example projects
+
+For complete working code, explore the example repositories:
+
+<CardGroup cols={2}>
+  <Card title="LiveKit outbound calling" href="/examples/livekit-vobiz-outbound">
+    Python agent that dials out using LiveKit and Vobiz SIP.
+  </Card>
+  <Card title="LiveKit inbound calling" href="/examples/livekit-vobiz-inbound">
+    Python agent that answers inbound calls via LiveKit and Vobiz SIP.
+  </Card>
+  <Card title="IVR with XML and Python" href="/examples/vobiz-ivr-xml-python">
+    Multi-level IVR menu built with Flask and VobizXML.
+  </Card>
+</CardGroup>

@@ -1,0 +1,125 @@
+---
+title: "Browser Calling with Vobiz WebRTC"
+sidebarTitle: "WebRTC"
+description: "Set up browser-based phone calls using Vobiz WebRTC. Configure a voice application, SIP endpoint, and run the demo client in about 15 minutes."
+---
+
+Vobiz WebRTC lets you make and receive real phone calls directly from a web browser. This guide walks you through creating a voice application, linking a phone number, configuring a SIP endpoint, and running the client — either via the hosted demo or locally.
+
+<Info>
+  **Reference repository**: [vobiz-ai/Vobiz-RTC-demo](https://github.com/vobiz-ai/Vobiz-RTC-demo) — ~15 minutes, no prior SIP experience required.
+</Info>
+
+## How it works
+
+Your browser connects to Vobiz via a SIP endpoint (user agent). When a call is made or received, Vobiz sends a webhook to your Answer URL, which returns XML instructions to bridge the call. The WebRTC client handles signaling and media entirely in the browser.
+
+<Steps>
+  <Step title="Create a voice application">
+    1. Log in to the [Vobiz Console](https://console.vobiz.ai).
+    2. Navigate to **Voice > Applications** and click **Create New Application**.
+    3. Enter a name (e.g., `WebRTC Demo`).
+    4. Set the **Answer URL** to your backend server URL — this endpoint must return valid Vobiz XML to bridge the call.
+    5. Optionally set an **Event URL** to receive call status updates (ringing, answered, hung up).
+    6. Click **Save**.
+
+    Your backend must return XML like this when Vobiz hits the Answer URL:
+
+    ```xml
+    <?xml version="1.0" encoding="UTF-8"?>
+    <Response>
+        <Dial callerId="+15550001234">
+            <Number>+15559998888</Number>
+        </Dial>
+    </Response>
+    ```
+
+    <Tip>`callerId` must be a phone number you own or have verified on Vobiz.</Tip>
+  </Step>
+
+  <Step title="Attach a phone number">
+    1. Open your application in the console (or edit the one you just created).
+    2. In the **Phone Numbers** section, select a purchased number to link to this application.
+    3. Click **Save**.
+
+    Any inbound call to that number will now be handled by your Answer URL.
+  </Step>
+
+  <Step title="Create a SIP endpoint">
+    An endpoint acts as the "phone" in the browser — it's the identity your WebRTC client logs in as.
+
+    1. Go to **Voice > Endpoints** and click **Create Endpoint**.
+    2. Set a **Username** (e.g., `agent001`) and a strong **Password**.
+    3. Under **Assign Application**, select the application you created in Step 1.
+    4. Click **Create**.
+    5. Note down the username and password — you'll use them to connect from the browser.
+  </Step>
+
+  <Step title="Run the WebRTC client">
+    Choose the option that fits your workflow:
+
+    <Tabs>
+      <Tab title="Hosted demo (fastest)">
+        1. Visit [https://rtc-demo.vobiz.ai/](https://rtc-demo.vobiz.ai/).
+        2. Enter the **Endpoint Username** and **Password** from Step 3.
+        3. Click **Connect** — you're ready to make and receive calls.
+      </Tab>
+      <Tab title="Run locally">
+        Clone the reference repo and run both the backend and frontend:
+
+        ```bash
+        git clone https://github.com/vobiz-ai/Vobiz-RTC-demo.git
+        cd Vobiz-RTC-demo
+        npm install
+        ```
+
+        Start the backend (handles Answer URL requests):
+
+        ```bash
+        npm start
+        ```
+
+        Start the frontend:
+
+        ```bash
+        npm run client
+        ```
+
+        Open `http://localhost:8080`, enter your endpoint credentials, and click **Connect**.
+
+        <Note>
+          Your backend must be accessible from the internet for Vobiz to reach the Answer URL. Use a tunnel like [ngrok](https://ngrok.com) during local development and update your application's Answer URL accordingly.
+        </Note>
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+## Answer URL logic
+
+When Vobiz receives a call on your linked number, it POSTs to your Answer URL with parameters including `From`, `To`, and `CallSid`. Your server must respond with XML. Here is a minimal JavaScript example:
+
+```javascript
+// Express.js example
+app.post('/answer', (req, res) => {
+  const { To } = req.body;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Dial callerId="${process.env.YOUR_VOBIZ_NUMBER}">
+        <Number>${To}</Number>
+    </Dial>
+</Response>`;
+  res.type('text/xml').send(xml);
+});
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Voice XML reference" icon="file-code" href="/xml/overview">
+    Learn all available XML verbs for controlling call flow.
+  </Card>
+  <Card title="SIP Endpoints API" icon="server" href="/endpoint/overview">
+    Manage endpoints programmatically via the REST API.
+  </Card>
+</CardGroup>

@@ -1,0 +1,366 @@
+---
+title: "Send WhatsApp Message — POST /v1/messaging/send"
+description: "API reference for sending WhatsApp text, media, and template messages. Includes all parameters, response fields, and code examples."
+sidebarTitle: "Send message"
+---
+
+Use this endpoint to send a WhatsApp message from a connected Vobiz channel to any phone number. The endpoint supports text, image, video, document, audio, and template message types.
+
+## Endpoint
+
+```
+POST https://api.vobiz.ai/v1/messaging/send
+```
+
+All requests require two authentication headers:
+
+| Header | Value |
+| --- | --- |
+| `X-Auth-ID` | Your Vobiz Auth ID (find it under **Settings → API Keys** in the console) |
+| `X-Auth-Token` | Your Vobiz Auth Token — never expose this in client-side code |
+| `Content-Type` | `application/json` |
+
+---
+
+## Request parameters
+
+<ParamField body="channel_id" type="string" required>
+  The ID of the WhatsApp channel to send from. Find this on the **Messaging → Channels** page in the console or from the Channels API response.
+</ParamField>
+
+<ParamField body="to" type="string" required>
+  Recipient phone number in E.164 format, including the country code and no spaces or dashes (e.g., `+1234567890`).
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  Message type. One of: `text`, `image`, `video`, `document`, `audio`, `template`.
+</ParamField>
+
+<ParamField body="text" type="object">
+  Required when `type` is `"text"`. Contains the text message content.
+
+  <ParamField body="body" type="string" required>
+    The message body, up to 4,096 characters. Supports emoji and line breaks.
+  </ParamField>
+
+  <ParamField body="preview_url" type="boolean">
+    When `true`, displays a URL preview if the message contains a link. Defaults to `false`.
+  </ParamField>
+</ParamField>
+
+<ParamField body="image" type="object">
+  Required when `type` is `"image"`. The image file must be hosted at a publicly accessible HTTPS URL.
+
+  <ParamField body="url" type="string" required>
+    Public HTTPS URL of the image. Supported formats: JPEG, PNG. Maximum size: 5 MB.
+  </ParamField>
+
+  <ParamField body="caption" type="string">
+    Optional caption displayed below the image. Maximum 1,024 characters.
+  </ParamField>
+</ParamField>
+
+<ParamField body="video" type="object">
+  Required when `type` is `"video"`. The video file must be hosted at a publicly accessible HTTPS URL.
+
+  <ParamField body="url" type="string" required>
+    Public HTTPS URL of the video. Supported formats: MP4, 3GPP. Maximum size: 16 MB.
+  </ParamField>
+
+  <ParamField body="caption" type="string">
+    Optional caption displayed below the video. Maximum 1,024 characters.
+  </ParamField>
+</ParamField>
+
+<ParamField body="document" type="object">
+  Required when `type` is `"document"`. The document must be hosted at a publicly accessible HTTPS URL.
+
+  <ParamField body="url" type="string" required>
+    Public HTTPS URL of the document. Supported formats: PDF, DOC, DOCX, XLS, XLSX, and others. Maximum size: 100 MB.
+  </ParamField>
+
+  <ParamField body="caption" type="string">
+    Optional caption. Maximum 1,024 characters.
+  </ParamField>
+
+  <ParamField body="filename" type="string">
+    Optional display name for the file shown to the recipient.
+  </ParamField>
+</ParamField>
+
+<ParamField body="template" type="object">
+  Required when `type` is `"template"`. The template must be approved by Meta before use.
+
+  <ParamField body="name" type="string" required>
+    The exact template name as it appears in Meta Business Manager.
+  </ParamField>
+
+  <ParamField body="language" type="string" required>
+    Language code for the template (e.g., `"en"`, `"es"`, `"pt_BR"`).
+  </ParamField>
+
+  <ParamField body="parameters" type="array">
+    Array of parameter objects that populate template variable placeholders (`{{1}}`, `{{2}}`, etc.) in the order they appear in the template body.
+
+    Each parameter object has:
+    - `type` (string) — always `"text"` for text variables
+    - `text` (string) — the value to substitute
+  </ParamField>
+</ParamField>
+
+---
+
+## Examples
+
+<CodeGroup>
+
+```bash cURL — text message
+curl -X POST https://api.vobiz.ai/v1/messaging/send \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel_id": "ch_abc123",
+    "to": "+1234567890",
+    "type": "text",
+    "text": {
+      "body": "Hello! Thanks for reaching out. How can we help you today?"
+    }
+  }'
+```
+
+```bash cURL — image message
+curl -X POST https://api.vobiz.ai/v1/messaging/send \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel_id": "ch_abc123",
+    "to": "+1234567890",
+    "type": "image",
+    "image": {
+      "url": "https://example.com/product-image.jpg",
+      "caption": "Check out our new product line!"
+    }
+  }'
+```
+
+```bash cURL — template message
+curl -X POST https://api.vobiz.ai/v1/messaging/send \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel_id": "ch_abc123",
+    "to": "+1234567890",
+    "type": "template",
+    "template": {
+      "name": "order_confirmation",
+      "language": "en",
+      "parameters": [
+        { "type": "text", "text": "Jane Smith" },
+        { "type": "text", "text": "ORD-98765" },
+        { "type": "text", "text": "April 30, 2026" }
+      ]
+    }
+  }'
+```
+
+```python Python
+import requests
+
+def send_whatsapp_message(channel_id, to, message_body):
+    response = requests.post(
+        "https://api.vobiz.ai/v1/messaging/send",
+        headers={
+            "X-Auth-ID": "YOUR_AUTH_ID",
+            "X-Auth-Token": "YOUR_AUTH_TOKEN",
+            "Content-Type": "application/json",
+        },
+        json={
+            "channel_id": channel_id,
+            "to": to,
+            "type": "text",
+            "text": {"body": message_body},
+        },
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def send_template_message(channel_id, to, template_name, params):
+    response = requests.post(
+        "https://api.vobiz.ai/v1/messaging/send",
+        headers={
+            "X-Auth-ID": "YOUR_AUTH_ID",
+            "X-Auth-Token": "YOUR_AUTH_TOKEN",
+            "Content-Type": "application/json",
+        },
+        json={
+            "channel_id": channel_id,
+            "to": to,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": "en",
+                "parameters": [{"type": "text", "text": p} for p in params],
+            },
+        },
+    )
+    response.raise_for_status()
+    return response.json()
+```
+
+```javascript Node.js
+async function sendTextMessage(channelId, to, body) {
+  const response = await fetch("https://api.vobiz.ai/v1/messaging/send", {
+    method: "POST",
+    headers: {
+      "X-Auth-ID": process.env.VOBIZ_AUTH_ID,
+      "X-Auth-Token": process.env.VOBIZ_AUTH_TOKEN,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      channel_id: channelId,
+      to,
+      type: "text",
+      text: { body },
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Vobiz API error: ${response.status}`);
+  }
+  return response.json();
+}
+
+async function sendTemplateMessage(channelId, to, templateName, params) {
+  const response = await fetch("https://api.vobiz.ai/v1/messaging/send", {
+    method: "POST",
+    headers: {
+      "X-Auth-ID": process.env.VOBIZ_AUTH_ID,
+      "X-Auth-Token": process.env.VOBIZ_AUTH_TOKEN,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      channel_id: channelId,
+      to,
+      type: "template",
+      template: {
+        name: templateName,
+        language: "en",
+        parameters: params.map((text) => ({ type: "text", text })),
+      },
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Vobiz API error: ${response.status}`);
+  }
+  return response.json();
+}
+```
+
+</CodeGroup>
+
+---
+
+## Response
+
+### Success — HTTP 200
+
+<ResponseField name="success" type="boolean">
+  `true` when the message was accepted.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Contains the message details.
+
+  <ResponseField name="data.message_id" type="string">
+    Unique identifier for the sent message, assigned by WhatsApp. Use this ID to correlate delivery status webhooks.
+  </ResponseField>
+
+  <ResponseField name="data.status" type="string">
+    Initial message status. Either `"sent"` (accepted by WhatsApp servers) or `"queued"` (waiting for the channel to process).
+  </ResponseField>
+
+  <ResponseField name="data.to" type="string">
+    The recipient phone number as provided in the request.
+  </ResponseField>
+
+  <ResponseField name="data.timestamp" type="string">
+    ISO 8601 timestamp of when the message was accepted.
+  </ResponseField>
+</ResponseField>
+
+**Example success response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "message_id": "wamid.HBgNMTIzNDU2Nzg5MAA=",
+    "status": "sent",
+    "to": "+1234567890",
+    "timestamp": "2026-03-19T10:30:00Z"
+  }
+}
+```
+
+### Error — HTTP 4xx/5xx
+
+<ResponseField name="success" type="boolean">
+  `false` when the request failed.
+</ResponseField>
+
+<ResponseField name="error" type="object">
+  Error details.
+
+  <ResponseField name="error.code" type="string">
+    Machine-readable error code. See the table below for common values.
+  </ResponseField>
+
+  <ResponseField name="error.message" type="string">
+    Human-readable description of the error.
+  </ResponseField>
+
+  <ResponseField name="error.details" type="string">
+    Additional context to help diagnose the issue.
+  </ResponseField>
+</ResponseField>
+
+**Example error response:**
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_NUMBER",
+    "message": "The recipient phone number is invalid",
+    "details": "Phone number must be in E.164 format with country code"
+  }
+}
+```
+
+### Error codes
+
+| Code | HTTP status | Description |
+| --- | --- | --- |
+| `INVALID_NUMBER` | 400 | Phone number format is invalid or the number is not registered on WhatsApp |
+| `INVALID_CHANNEL` | 400 | Channel ID does not exist or the channel is not active |
+| `TEMPLATE_NOT_FOUND` | 400 | Template name does not exist or the template is not approved by Meta |
+| `PARAMETER_ERROR` | 400 | Template parameters are invalid or don't match the template definition |
+| `RATE_LIMIT_EXCEEDED` | 429 | Too many requests — wait for the cooldown period indicated in the `Retry-After` header |
+| `UNAUTHORIZED` | 401 | Missing or invalid `X-Auth-ID` / `X-Auth-Token` headers |
+| `INTERNAL_ERROR` | 500 | Unexpected server error — retry with exponential backoff |
+
+---
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Message templates" href="/whatsapp/messaging#template-messages">
+    Create and approve templates before sending them via this endpoint.
+  </Card>
+  <Card title="Webhook events" href="/whatsapp/webhooks/events">
+    Receive delivery status updates for messages sent through this endpoint.
+  </Card>
+</CardGroup>

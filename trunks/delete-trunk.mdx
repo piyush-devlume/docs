@@ -1,0 +1,99 @@
+---
+title: "Delete a Trunk — Permanently Remove a SIP Trunk"
+description: "Permanently delete a SIP trunk and all its credentials, IP ACLs, and origination URIs. This action is irreversible — consider disabling the trunk instead."
+sidebarTitle: "Delete a trunk"
+---
+
+Use this endpoint to permanently remove a SIP trunk from your account. Deletion cascades to all resources attached to the trunk.
+
+<Warning>
+Deleting a trunk permanently removes all associated credentials, IP ACL entries, and origination URIs. It immediately stops active calls on the trunk and makes the trunk's SIP domain unavailable. This action cannot be undone.
+
+Consider setting `enabled: false` via [Update a Trunk](/trunks/update-trunk) to disable the trunk while preserving its configuration.
+</Warning>
+
+## Request
+
+```
+DELETE https://api.vobiz.ai/api/v1/account/{auth_id}/trunks/{trunk_id}
+```
+
+**Headers**
+
+| Header | Value |
+|--------|-------|
+| `X-Auth-ID` | Your account Auth ID |
+| `X-Auth-Token` | Your account Auth Token |
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account identifier.
+</ParamField>
+
+<ParamField path="trunk_id" type="string" required>
+  The UUID of the trunk to delete.
+</ParamField>
+
+## Response
+
+Returns `204 No Content` on success. No response body is returned.
+
+| Status | Meaning |
+|--------|---------|
+| `204 No Content` | Trunk deleted successfully. |
+| `404 Not Found` | Trunk does not exist or belongs to a different account. |
+| `409 Conflict` | Trunk has active calls. Wait for calls to complete before deleting. |
+
+## Examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE \
+  https://api.vobiz.ai/api/v1/account/{Auth_ID}/trunks/bfab10fb-cb97-488b-9c63-989c32980b0f \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+trunk_id = "bfab10fb-cb97-488b-9c63-989c32980b0f"
+url = f"https://api.vobiz.ai/api/v1/account/{{Auth_ID}}/trunks/{trunk_id}"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.delete(url, headers=headers)
+if response.status_code == 204:
+    print("Trunk deleted successfully.")
+```
+
+```javascript Node.js
+const trunkId = "bfab10fb-cb97-488b-9c63-989c32980b0f";
+const response = await fetch(
+  `https://api.vobiz.ai/api/v1/account/{Auth_ID}/trunks/${trunkId}`,
+  {
+    method: "DELETE",
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    }
+  }
+);
+
+if (response.status === 204) {
+  console.log("Trunk deleted successfully.");
+}
+```
+
+</CodeGroup>
+
+**Before deleting a trunk, verify that:**
+
+- No active calls are running on the trunk
+- You have documented any credentials or routing configurations you may need later
+- Phone numbers assigned to this trunk are either reassigned or released
+- Downstream services and SIP clients have been updated

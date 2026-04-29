@@ -1,0 +1,132 @@
+---
+title: "SIP Trunking Overview — Vobiz Trunk Service"
+description: "Manage SIP trunks for enterprise voice. Create trunks with auto-provisioned SIP domains, configure authentication methods, rate limits, and outbound routing."
+sidebarTitle: "Overview"
+---
+
+SIP trunks are the foundation of your Vobiz voice infrastructure. Each trunk acts as a dedicated virtual voice gateway with its own SIP domain, authentication rules, rate limits, and outbound routing configuration. Vobiz automatically provisions a unique domain for every trunk you create and integrates with Kamailio for robust SIP routing.
+
+## What is a SIP trunk?
+
+A SIP trunk is a virtual connection that carries voice traffic over IP networks. When you create a trunk, Vobiz generates a unique domain in the format `{trunk_id}.sip.vobiz.ai` and registers it with the Kamailio SIP proxy. You configure who can use the trunk (via credentials or IP whitelisting) and where outbound calls are sent (via origination URIs).
+
+## Key features
+
+**Auto-generated SIP domains** — Every trunk receives a unique domain like `bfab10fb.sip.vobiz.ai` immediately on creation.
+
+**Dual authentication** — Choose username/password credentials, IP-based whitelisting, or both for layered security.
+
+**Rate limiting** — Set a concurrent call ceiling and a calls-per-second (CPS) cap to protect your trunk from traffic spikes.
+
+**Priority-based routing** — Configure multiple origination URIs with failover priorities and weighted load balancing.
+
+**Kamailio integration** — All trunks use Kamailio for SIP proxy, authentication, and load balancing.
+
+## Quick setup
+
+<Steps>
+  <Step title="Create a trunk">
+    Call [Create a Trunk](/trunks/create-trunk) to provision a new SIP trunk. Save the returned `trunk_id` — you'll use it for all subsequent operations.
+  </Step>
+  <Step title="Configure authentication">
+    Add [credentials](/trunks/credentials) for username/password auth, or configure [IP ACLs](/trunks/ip-acl) to whitelist known static IP addresses. You can use both methods together.
+  </Step>
+  <Step title="Set up outbound routing">
+    Create one or more [origination URIs](/trunks/origination-uri) to define where outbound calls are sent. Use priorities for failover and weights for load balancing.
+  </Step>
+  <Step title="Assign phone numbers">
+    [Assign a phone number](/trunks/assign-number) from your account inventory to route inbound calls through this trunk.
+  </Step>
+  <Step title="Test the trunk">
+    Configure your SIP client with the trunk's domain and credentials, then place a test call to verify end-to-end connectivity.
+  </Step>
+</Steps>
+
+## Authentication methods
+
+<Tabs>
+  <Tab title="Username / password">
+    SIP digest authentication using credentials stored in the Kamailio subscriber database. Works from any IP address, making it ideal for remote workers, mobile softphones, and devices behind NAT.
+
+    - Works from any IP address
+    - Supports multiple credentials per trunk
+    - Passwords are securely hashed and never returned by the API
+  </Tab>
+  <Tab title="IP whitelisting">
+    IP-based authentication requires no password — calls from a whitelisted IP are admitted automatically. Best suited for PBX systems, SIP gateways, and carrier connections with static public IP addresses.
+
+    - No password exchange required
+    - Faster authentication (no digest challenge)
+    - Requires a static public IPv4 address
+  </Tab>
+</Tabs>
+
+<Note>
+For maximum security, combine both methods. Requiring a whitelisted IP **and** valid credentials provides defense in depth.
+</Note>
+
+## Trunk management
+
+<CardGroup cols={3}>
+  <Card title="The trunk object" href="/trunks/trunk-object" icon="cube">
+    Complete structure and all attributes of a trunk.
+  </Card>
+  <Card title="Create a trunk" href="/trunks/create-trunk" icon="plus">
+    Provision a new SIP trunk with an auto-generated domain.
+  </Card>
+  <Card title="Retrieve a trunk" href="/trunks/retrieve-trunk" icon="magnifying-glass">
+    Fetch the full details of a specific trunk by ID.
+  </Card>
+  <Card title="Retrieve all trunks" href="/trunks/retrieve-all-trunks" icon="list">
+    List every trunk in your account with pagination.
+  </Card>
+  <Card title="Update a trunk" href="/trunks/update-trunk" icon="pen">
+    Modify trunk name, description, and rate limits.
+  </Card>
+  <Card title="Delete a trunk" href="/trunks/delete-trunk" icon="trash">
+    Permanently remove a trunk and all its resources.
+  </Card>
+</CardGroup>
+
+## Trunk configuration
+
+<CardGroup cols={3}>
+  <Card title="Credentials" href="/trunks/credentials" icon="key">
+    Manage username/password authentication for SIP clients.
+  </Card>
+  <Card title="IP ACLs" href="/trunks/ip-acl" icon="shield">
+    Whitelist IPv4 addresses for password-free authentication.
+  </Card>
+  <Card title="Origination URIs" href="/trunks/origination-uri" icon="arrow-right">
+    Configure outbound SIP routing with failover and load balancing.
+  </Card>
+  <Card title="Assign a number" href="/trunks/assign-number" icon="phone">
+    Link a phone number to this trunk for inbound routing.
+  </Card>
+  <Card title="Unassign a number" href="/trunks/unassign-number" icon="phone-slash">
+    Remove the link between a number and a trunk.
+  </Card>
+</CardGroup>
+
+## SIP call log status codes
+
+When reviewing call logs, you may encounter the following status codes:
+
+| Code | Description |
+|------|-------------|
+| `NORMAL_CLEARING` | Call ended normally — one party hung up. |
+| `USER_BUSY` | Called party was busy or declined. |
+| `NO_ANSWER` | Called party did not answer within the timeout. |
+| `ORIGINATOR_CANCEL` | Caller hung up before the call was answered. |
+| `CALL_REJECTED` | Call was explicitly rejected (blocking rules, spam filter, etc.). |
+| `INVALID_NUMBER` | Dialed number format is incorrect or does not exist. |
+| `UNALLOCATED_NUMBER` | Number is valid but not currently allocated to a subscriber. |
+| `SERVICE_UNAVAILABLE` | Destination is temporarily unavailable (SIP 503). |
+| `SERVER_ERROR` | Internal server error during call processing. |
+| `MEDIA_TIMEOUT` | No RTP media received — likely a firewall or NAT issue. |
+| `PROTOCOL_ERROR` | Malformed SIP message or protocol violation. |
+| `NETWORK_OUT_OF_ORDER` | Severe network failure prevented routing. |
+| `DESTINATION_OUT_OF_ORDER` | Destination endpoint cannot accept the call (offline server). |
+| `NORMAL_TEMPORARY_FAILURE` | Temporary routing failure — retrying may succeed. |
+| `SWITCH_CONGESTION` | SIP switch at capacity — high traffic period. |
+| `UNKNOWN` | Error could not be mapped to a standard SIP cause code. |

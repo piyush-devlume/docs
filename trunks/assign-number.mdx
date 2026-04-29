@@ -1,0 +1,134 @@
+---
+title: "Assign a Phone Number to a SIP Trunk"
+description: "Assign a phone number from your Vobiz inventory to a SIP trunk. Inbound calls to that number are immediately routed through the designated trunk."
+sidebarTitle: "Assign a number"
+---
+
+Use this endpoint to link a phone number from your account inventory to a specific SIP trunk. Once assigned, all inbound calls to that number route through the trunk according to its configuration.
+
+<Note>
+The phone number must already exist in your account inventory. Use the Purchase Number endpoint to acquire a number before assigning it.
+</Note>
+
+<Warning>
+Always URL-encode the phone number in the path. Replace `+` with `%2B`. For example, `+1234567890` becomes `%2B1234567890`. Failing to encode the `+` sign will result in a `404` error.
+</Warning>
+
+## Request
+
+```
+POST https://api.vobiz.ai/api/v1/account/{auth_id}/numbers/{PHONE_NUMBER}/assign
+```
+
+**Headers**
+
+| Header | Value |
+|--------|-------|
+| `X-Auth-ID` | Your account Auth ID |
+| `X-Auth-Token` | Your account Auth Token |
+| `Content-Type` | `application/json` |
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account identifier. Must match the `X-Auth-ID` header.
+</ParamField>
+
+<ParamField path="PHONE_NUMBER" type="string" required>
+  The phone number to assign, URL-encoded in E.164 format. Use `%2B` in place of `+` (e.g., `%2B1234567890`).
+</ParamField>
+
+## Body parameters
+
+<ParamField body="trunk_group_id" type="string (UUID)" required>
+  The UUID of the trunk to which you want to assign this phone number.
+</ParamField>
+
+## Response
+
+Returns `204 No Content` on success. No response body is returned.
+
+| Status | Meaning |
+|--------|---------|
+| `204 No Content` | Number assigned successfully. |
+| `404 Not Found` | Phone number not found or URL not correctly encoded. |
+| `400 Bad Request` | Number is already assigned to a trunk. |
+
+## Examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  "https://api.vobiz.ai/api/v1/account/{auth_id}/numbers/%2B1234567890/assign" \
+  -H "X-Auth-ID: {auth_id}" \
+  -H "X-Auth-Token: {AUTH_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"trunk_group_id": "{TRUNK_ID}"}'
+```
+
+```python Python
+import requests
+from urllib.parse import quote
+
+phone_number = "+1234567890"
+encoded_number = quote(phone_number, safe="")
+
+url = f"https://api.vobiz.ai/api/v1/account/{{auth_id}}/numbers/{encoded_number}/assign"
+headers = {
+    "X-Auth-ID": "{auth_id}",
+    "X-Auth-Token": "{AUTH_TOKEN}",
+    "Content-Type": "application/json"
+}
+payload = {"trunk_group_id": "{TRUNK_ID}"}
+
+response = requests.post(url, json=payload, headers=headers)
+if response.status_code == 204:
+    print("Number assigned successfully.")
+```
+
+```javascript Node.js
+const phoneNumber = "+1234567890";
+const encodedNumber = encodeURIComponent(phoneNumber);
+
+const response = await fetch(
+  `https://api.vobiz.ai/api/v1/account/{auth_id}/numbers/${encodedNumber}/assign`,
+  {
+    method: "POST",
+    headers: {
+      "X-Auth-ID": "{auth_id}",
+      "X-Auth-Token": "{AUTH_TOKEN}",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ trunk_group_id: "{TRUNK_ID}" })
+  }
+);
+
+if (response.status === 204) {
+  console.log("Number assigned successfully.");
+}
+```
+
+</CodeGroup>
+
+**Error responses**
+
+```json
+// 404 — number not found or URL encoding issue
+{
+  "error": "Number not found",
+  "message": "The phone number could not be found. Ensure it is URL-encoded correctly."
+}
+```
+
+```json
+// 400 — already assigned
+{
+  "error": "invalid request",
+  "message": "This number is already assigned to a trunk."
+}
+```
+
+<Tip>
+Find the `trunk_group_id` in the response from [Create a Trunk](/trunks/create-trunk) or [Retrieve a Trunk](/trunks/retrieve-trunk). To remove the assignment later, use the [Unassign Number](/trunks/unassign-number) endpoint.
+</Tip>

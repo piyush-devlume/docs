@@ -1,0 +1,177 @@
+---
+title: "List all recordings in your Vobiz account"
+description: "GET a paginated list of recordings. Filter by call UUID or recording type. Returns recording IDs, download URLs, duration, and file metadata."
+sidebarTitle: "List recordings"
+---
+
+Use this endpoint to retrieve a list of recordings stored in your account. Results support offset-based pagination and filtering by call UUID or recording type. The response includes recording IDs, download paths, durations, and file formats that you can use for playback, archival, or cross-referencing with CDR data.
+
+**GET** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Recording/`
+
+<Note>
+  The `Account` and `Recording` path segments are case-sensitive. Use the exact capitalization shown above.
+</Note>
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+## Query parameters
+
+<ParamField query="limit" type="integer">
+  Number of recording records to return per request. Default: `20`. Maximum: `100`.
+</ParamField>
+
+<ParamField query="offset" type="integer">
+  Number of results to skip for pagination. Default: `0`. Set to `20` to see the second page of results when `limit=20`.
+</ParamField>
+
+<ParamField query="call_uuid" type="string">
+  Filter recordings by a specific call UUID. Returns only recordings associated with that call.
+</ParamField>
+
+<ParamField query="recording_type" type="string">
+  Filter by recording type. Values: `trunk`, `extension`.
+</ParamField>
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET "https://api.vobiz.ai/api/v1/Account/{auth_id}/Recording/?limit=20&offset=0&recording_type=trunk" \
+  -H "X-Auth-ID: {auth_id}" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Recording/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+params = {"limit": 20, "offset": 0, "recording_type": "trunk"}
+
+response = requests.get(url, headers=headers, params=params)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const response = await axios.get(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Recording/`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json",
+    },
+    params: { limit: 20, offset: 0, recording_type: "trunk" },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response fields
+
+<ResponseField name="recordings" type="array">
+  Array of recording objects.
+
+  <Expandable title="Recording object fields">
+    <ResponseField name="recording_id" type="string">
+      Unique identifier for the recording. Use this to download or delete the recording.
+    </ResponseField>
+    <ResponseField name="call_id" type="string">
+      Call UUID for cross-referencing with CDR records.
+    </ResponseField>
+    <ResponseField name="recording_type" type="string">
+      Type of recording (`trunk` or `extension`).
+    </ResponseField>
+    <ResponseField name="url" type="string">
+      Direct URL to the audio file.
+    </ResponseField>
+    <ResponseField name="download_path" type="string">
+      API path to download the recording.
+    </ResponseField>
+    <ResponseField name="duration" type="integer">
+      Recording length in seconds.
+    </ResponseField>
+    <ResponseField name="created_at" type="string">
+      ISO 8601 timestamp when the recording was created.
+    </ResponseField>
+    <ResponseField name="file_size" type="integer">
+      File size in bytes.
+    </ResponseField>
+    <ResponseField name="format" type="string">
+      Audio format (`mp3` or `wav`).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="pagination" type="object">
+  Pagination metadata.
+
+  <Expandable title="pagination fields">
+    <ResponseField name="limit" type="integer">
+      Number of results per page.
+    </ResponseField>
+    <ResponseField name="offset" type="integer">
+      Number of results skipped.
+    </ResponseField>
+    <ResponseField name="total" type="integer">
+      Total number of recordings matching the query.
+    </ResponseField>
+    <ResponseField name="has_more" type="boolean">
+      Whether additional pages of results exist.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example response
+
+```json 200 OK
+{
+  "recordings": [
+    {
+      "recording_id": "REC_abc123def456",
+      "call_id": "7f8e9d2c-1a3b-4c5d-6e7f-8g9h0i1j2k3l",
+      "recording_type": "trunk",
+      "url": "https://recordings.vobiz.ai/files/REC_abc123def456.mp3",
+      "download_path": "/v1/Account/MA_XXXXXXXX/Recording/REC_abc123def456/download",
+      "duration": 312,
+      "created_at": "2026-01-23T10:30:00Z",
+      "file_size": 2457600,
+      "format": "mp3"
+    },
+    {
+      "recording_id": "REC_xyz789uvw012",
+      "call_id": "2a3b4c5d-6e7f-8g9h-0i1j-2k3l4m5n6o7p",
+      "recording_type": "trunk",
+      "url": "https://recordings.vobiz.ai/files/REC_xyz789uvw012.mp3",
+      "download_path": "/v1/Account/MA_XXXXXXXX/Recording/REC_xyz789uvw012/download",
+      "duration": 125,
+      "created_at": "2026-01-23T09:15:00Z",
+      "file_size": 987600,
+      "format": "mp3"
+    }
+  ],
+  "pagination": {
+    "limit": 20,
+    "offset": 0,
+    "total": 150,
+    "has_more": true
+  }
+}
+```

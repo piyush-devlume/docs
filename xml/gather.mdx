@@ -1,0 +1,221 @@
+---
+title: "Gather Element: Collect DTMF and Speech Input"
+description: "Gather collects DTMF keypad input or spoken speech from callers. Use it to build IVR menus, voice forms, and speech-driven workflows with a single XML element."
+sidebarTitle: "Gather"
+---
+
+The `<Gather>` element collects input from the caller — either DTMF keypad digits, automatic speech recognition (ASR), or both simultaneously. When Vobiz detects the expected input, it posts the result to your `action` URL and waits for a new XML response. Nest `<Speak>` or `<Play>` elements inside `<Gather>` to prompt the caller while Vobiz listens, so playback and input collection happen at the same time.
+
+## Attributes
+
+<ParamField body="action" type="string" required>
+  The URL to which Vobiz sends the collected input. Must be a fully qualified URL. See the callback parameters table below for the fields included in the request.
+</ParamField>
+
+<ParamField body="method" type="string" default="POST">
+  The HTTP method used when calling the `action` URL.
+
+  **Allowed values:** `GET`, `POST`
+</ParamField>
+
+<ParamField body="inputType" type="string">
+  The type of input to accept. When set to `dtmf speech`, Vobiz listens for both and sends whichever is detected first.
+
+  **Allowed values:** `dtmf`, `speech`, `dtmf speech`
+</ParamField>
+
+<ParamField body="executionTimeout" type="integer" default="15">
+  Maximum time in seconds to wait for input after any nested `<Speak>` or `<Play>` elements have finished. If no input is received within this period, Vobiz moves to the next element.
+
+  **Allowed values:** 5–60
+</ParamField>
+
+<ParamField body="numDigits" type="integer" default="32">
+  Maximum number of DTMF digits to collect. Vobiz submits the input as soon as this count is reached.
+
+  **Allowed values:** 1–32
+
+  Applies to `dtmf` and `dtmf speech` input types.
+</ParamField>
+
+<ParamField body="finishOnKey" type="string" default="#">
+  A single key the caller can press to submit their input early. Set to an empty string or `none` to disable key-based submission.
+
+  **Allowed values:** `0`–`9`, `*`, `#`, empty string, `none`
+
+  Applies to `dtmf` and `dtmf speech` input types.
+</ParamField>
+
+<ParamField body="digitEndTimeout" type="string" default="auto">
+  Time in seconds to wait between consecutive digit presses before treating the collected digits as complete.
+
+  **Allowed values:** `2`–`10`, or `auto`
+
+  Applies to `dtmf` and `dtmf speech` input types.
+</ParamField>
+
+<ParamField body="speechEndTimeout" type="string" default="auto">
+  Time in seconds Vobiz waits after detecting silence before finalising a speech transcription.
+
+  **Allowed values:** `2`–`10`, or `auto`
+
+  Applies to `speech` and `dtmf speech` input types.
+</ParamField>
+
+<ParamField body="speechModel" type="string" default="default">
+  The ASR model to use for transcription.
+
+  - `command_and_search` — Optimised for short commands and search queries.
+  - `phone_call` — Optimised for standard telephone audio with slight inconsistency.
+  - `telephony` — Enhanced phone call model for higher accuracy.
+  - `default` — General-purpose model for all other audio.
+
+  Applies to `speech` and `dtmf speech` input types.
+</ParamField>
+
+<ParamField body="language" type="string" default="en-US">
+  The language Vobiz should recognise from the caller.
+
+  Applies to `speech` and `dtmf speech` input types.
+</ParamField>
+
+<ParamField body="hints" type="string">
+  A comma-separated list of words or phrases that boost recognition probability for domain-specific terms.
+
+  **Limits:** 500 phrases per request, 10,000 characters per request, 100 characters per phrase.
+
+  Applies to `speech` and `dtmf speech` input types.
+</ParamField>
+
+<ParamField body="interimSpeechResultsCallback" type="string">
+  A URL that receives real-time interim transcription results as the caller speaks. See the interim callback parameters table below.
+
+  Applies to `speech` and `dtmf speech` input types.
+</ParamField>
+
+<ParamField body="interimSpeechResultsCallbackMethod" type="string" default="POST">
+  HTTP method used when calling `interimSpeechResultsCallback`.
+
+  **Allowed values:** `GET`, `POST`
+</ParamField>
+
+<ParamField body="profanityFilter" type="boolean" default="false">
+  When `true`, profane words in the transcription are replaced with their first letter followed by asterisks (e.g. `f***`).
+
+  Applies to `speech` and `dtmf speech` input types.
+</ParamField>
+
+<ParamField body="log" type="boolean" default="true">
+  When `false`, Vobiz does not log the digits or speech collected while this element is active.
+</ParamField>
+
+<ParamField body="redirect" type="boolean" default="true">
+  When `true`, Vobiz redirects the call to the `action` URL after collecting input. When `false`, Vobiz requests the URL in the background and continues to the next XML element.
+</ParamField>
+
+## Parameters sent to the action URL
+
+In addition to the standard call parameters, Vobiz includes the following fields when it posts to your `action` URL.
+
+| Parameter | Description |
+|---|---|
+| `InputType` | The type of input detected: `dtmf` or `speech`. |
+| `Digits` | The digits entered by the caller, excluding the `finishOnKey` character. Empty if `InputType` is `speech`. |
+| `Speech` | The transcribed text of the caller's speech. Empty if `InputType` is `dtmf`. |
+| `SpeechConfidenceScore` | A confidence score between `0.0` and `1.0`. Higher values indicate a more likely accurate transcription. |
+| `BilledAmount` | The total amount billed for speech input transcription. |
+
+## Parameters sent to the interim speech callback URL
+
+| Parameter | Description |
+|---|---|
+| `StableSpeech` | The stable portion of the interim transcription result. |
+| `UnstableSpeech` | The newer, potentially changing portion of the interim result. |
+| `Stability` | An estimate from `0.0` (unstable) to `1.0` (stable) of how likely the result is to change. |
+| `SequenceNumber` | A sequence number to help order incoming callback requests. |
+
+## Examples
+
+### Single-digit IVR menu
+
+Collect one keypress and route to your handler.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Gather
+        numDigits="1"
+        timeout="10"
+        finishOnKey="#"
+        action="https://yourapp.com/menu-choice"
+        method="POST">
+        <Speak>
+            Press 1 for sales.
+            Press 2 for support.
+            Press 0 for the operator.
+        </Speak>
+    </Gather>
+    <Speak>We didn't receive your input. Goodbye!</Speak>
+    <Hangup/>
+</Response>
+```
+
+### Collect a multi-digit account number
+
+Wait for up to 10 digits and submit when the caller presses `#`.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Gather
+        numDigits="10"
+        finishOnKey="#"
+        executionTimeout="30"
+        action="https://yourapp.com/account-lookup">
+        <Speak>Please enter your account number followed by the pound key.</Speak>
+    </Gather>
+    <Speak>No account number was received. Please call back and try again.</Speak>
+    <Hangup/>
+</Response>
+```
+
+### Speech input with domain hints
+
+Transcribe a city name with custom hints to improve accuracy.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Gather
+        inputType="speech"
+        speechModel="phone_call"
+        hints="London,Paris,Berlin,Madrid,Rome"
+        language="en-US"
+        action="https://yourapp.com/city-selected">
+        <Speak>Please say the name of your city.</Speak>
+    </Gather>
+</Response>
+```
+
+### Accept speech or DTMF — whichever comes first
+
+Provide flexibility for callers who prefer speaking or pressing keys.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Gather
+        inputType="dtmf speech"
+        numDigits="1"
+        speechModel="command_and_search"
+        action="https://yourapp.com/selection"
+        executionTimeout="15">
+        <Speak>Say "sales" or press 1, say "support" or press 2.</Speak>
+    </Gather>
+    <Redirect>https://yourapp.com/no-input</Redirect>
+</Response>
+```
+
+<Note>
+  You can nest `<Speak>` and `<Play>` elements inside `<Gather>`. Vobiz plays them while simultaneously listening for input — it stops playback and submits the result as soon as the caller responds.
+</Note>

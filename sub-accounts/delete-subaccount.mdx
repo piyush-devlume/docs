@@ -1,0 +1,85 @@
+---
+title: "Permanently delete a Vobiz sub-account"
+description: "Remove a sub-account and all associated credentials from your Vobiz master account. This operation is permanent and cannot be undone."
+sidebarTitle: "Delete sub-account"
+---
+
+Use this endpoint to permanently delete a sub-account from your master account. The sub-account and all its associated credentials are removed immediately. This action cannot be undone, so make sure you have backed up any data you need before proceeding.
+
+**DELETE** `https://api.vobiz.ai/api/v1/accounts/{auth_id}/sub-accounts/{sub_auth_id}`
+
+<Warning>
+  Deleting a sub-account is permanent. All associated credentials become invalid immediately. Any integrations or services using the sub-account's `auth_id` and `auth_token` will stop working.
+</Warning>
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your master account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+<ParamField path="sub_auth_id" type="string" required>
+  The unique identifier of the sub-account to delete (e.g., `SA_67401KW8`).
+</ParamField>
+
+No request body is required.
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE 'https://api.vobiz.ai/api/v1/accounts/{auth_id}/sub-accounts/{sub_auth_id}' \
+  -H 'X-Auth-ID: {auth_id}' \
+  -H 'X-Auth-Token: {auth_token}'
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+sub_auth_id = "SA_67401KW8"
+url = f"https://api.vobiz.ai/api/v1/accounts/{auth_id}/sub-accounts/{sub_auth_id}"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.delete(url, headers=headers)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const subAuthId = "SA_67401KW8";
+
+const response = await axios.delete(
+  `https://api.vobiz.ai/api/v1/accounts/${authId}/sub-accounts/${subAuthId}`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response fields
+
+<ResponseField name="message" type="string">
+  Confirmation message on success (e.g., `Sub-account deleted successfully`).
+</ResponseField>
+
+## Example response
+
+```json 200 OK
+{
+  "message": "Sub-account deleted successfully"
+}
+```

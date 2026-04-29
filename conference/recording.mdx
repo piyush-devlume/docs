@@ -1,0 +1,182 @@
+---
+title: "Start and stop conference call recordings"
+description: "Start and stop conference recordings in MP3 or WAV with optional transcription. Recordings can be initiated or stopped at any point during an active conference."
+sidebarTitle: "Conference recording"
+---
+
+Use these endpoints to capture audio from an active conference call. You can start a recording at any point during the conference and stop it explicitly or let it stop automatically when the conference ends. Optionally enable automatic speech-to-text transcription.
+
+<Note>
+  Recording captures audio from all conference participants in a single mixed audio file. Transcription supports English and is available for recordings under 4 hours.
+</Note>
+
+---
+
+## Start recording
+
+Start recording an active conference. You can choose the file format and enable transcription.
+
+**POST** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Record/`
+
+### Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+<ParamField path="conference_name" type="string" required>
+  Name of the conference to record. URL-encode spaces and special characters.
+</ParamField>
+
+### Body parameters
+
+<ParamField body="file_format" type="string">
+  Audio format for the recording. Values: `mp3`, `wav`. Default: `mp3`.
+  Use `wav` for highest quality; `mp3` for smaller file sizes.
+</ParamField>
+
+<ParamField body="transcription_type" type="string">
+  Enable automatic transcription. Set to `auto` to enable.
+</ParamField>
+
+<ParamField body="transcription_url" type="string">
+  Webhook URL to notify when transcription is complete.
+</ParamField>
+
+<ParamField body="transcription_method" type="string">
+  HTTP method for the transcription callback. Default: `POST`.
+</ParamField>
+
+<ParamField body="callback_url" type="string">
+  Webhook URL notified when the recording is available.
+</ParamField>
+
+<ParamField body="callback_method" type="string">
+  HTTP method for the recording callback. Default: `POST`.
+</ParamField>
+
+### Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST "https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/My%20Conf%20Room/Record/" \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "file_format": "mp3",
+    "transcription_type": "auto",
+    "callback_url": "https://example.com/recording-ready"
+  }'
+```
+
+```python Python
+import requests
+from urllib.parse import quote
+
+auth_id = "YOUR_AUTH_ID"
+conference_name = quote("My Conf Room")
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Record/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+payload = {
+    "file_format": "mp3",
+    "transcription_type": "auto",
+    "callback_url": "https://example.com/recording-ready"
+}
+
+response = requests.post(url, headers=headers, json=payload)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const conferenceName = encodeURIComponent("My Conf Room");
+
+const response = await axios.post(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Conference/${conferenceName}/Record/`,
+  {
+    file_format: "mp3",
+    transcription_type: "auto",
+    callback_url: "https://example.com/recording-ready",
+  },
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json",
+    },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+---
+
+## Stop recording
+
+Stop an active conference recording. The recording is finalized and the download URL is available via the callback or the Recordings API.
+
+**DELETE** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Record/`
+
+### Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE "https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/My%20Conf%20Room/Record/" \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+from urllib.parse import quote
+
+auth_id = "YOUR_AUTH_ID"
+conference_name = quote("My Conf Room")
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/{conference_name}/Record/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.delete(url, headers=headers)
+print(response.status_code)
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const conferenceName = encodeURIComponent("My Conf Room");
+
+await axios.delete(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Conference/${conferenceName}/Record/`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    },
+  }
+);
+```
+
+</CodeGroup>
+
+<Warning>
+  Ensure you have obtained consent from all participants before recording. Recording consent laws vary by jurisdiction. Consider announcing the recording at the start of the conference.
+</Warning>
+
+<Tip>
+  After the conference ends, retrieve the recording URL and associated metadata through the [Recordings API](/recording/retrieve-recording).
+</Tip>

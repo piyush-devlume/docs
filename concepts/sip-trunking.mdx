@@ -1,0 +1,148 @@
+---
+title: "SIP Trunking: Signaling, Media, and AI Platforms"
+description: "How SIP works: the INVITE→RTP message flow, signaling versus media separation, codec negotiation, AI platform compatibility, and 10 common developer pitfalls."
+sidebarTitle: "SIP trunking"
+---
+
+Session Initiation Protocol (SIP) is the foundational signaling standard that powers virtually every phone call on the modern internet. It is how two endpoints agree to start, modify, and end a real-time communication session.
+
+For voice AI developers, SIP is the vital bridge between the global telephone network (PSTN) and modern application infrastructure. It translates standard phone calls into digital streams your AI agents can interact with.
+
+## The golden rule of telephony
+
+<Warning>
+  SIP is a **signaling protocol only**. It handles call routing and setup but carries absolutely zero audio. The actual voice data travels completely separately over **RTP (Real-time Transport Protocol)**. Grasping this split is critical for debugging any telephony issue.
+</Warning>
+
+SIP operates similarly to HTTP — text-based requests and responses negotiate settings like audio codecs via SDP (Session Description Protocol). It typically runs over UDP for speed, but supports TCP and TLS for secure, reliable signaling.
+
+### Signaling layer (SIP) vs. media layer (RTP)
+
+<CardGroup cols={2}>
+  <Card title="SIP — signaling">
+    - Runs via UDP, TCP, or TLS
+    - Text-based messages (like HTTP)
+    - Negotiates codecs and port assignments
+    - Handles ringing, answering, and hanging up
+    - Zero audio bytes ever pass through SIP
+  </Card>
+  <Card title="RTP — media">
+    - Always runs over UDP (prioritizes speed)
+    - Binary packets, 20 ms audio frames
+    - Carries G.711 µ-law or G.722 audio
+    - Direct path between endpoints
+    - Fully distinct from SIP servers
+  </Card>
+</CardGroup>
+
+<Note>
+  When you encounter the classic "one-way audio" bug during testing, SIP negotiation succeeded. The isolated failure is in the RTP path — likely blocked by symmetric NAT or restrictive UDP firewall rules.
+</Note>
+
+## The SIP handshake flow
+
+Every call follows the same signaling exchange before audio begins:
+
+```
+PSTN CALLER              YOUR ENDPOINT
+     |                         |
+     |--- INVITE (SDP offer) -->|
+     |<-- 100 Trying -----------|
+     |<-- 180 Ringing ----------|
+     |<-- 200 OK (SDP answer) --|
+     |--- ACK ----------------->|
+     |                         |
+     |<== RTP AUDIO (UDP) ====>|
+     |                         |
+     |--- BYE ----------------->|
+     |<-- 200 OK --------------|
+```
+
+The INVITE carries an SDP offer describing the caller's preferred codecs and the UDP port where it expects to receive RTP. The 200 OK carries the answerer's SDP response — codec selection and its own RTP port. Once ACK is exchanged, the RTP audio stream starts on those negotiated ports, completely bypassing the SIP server.
+
+## SIP trunking for voice AI
+
+A SIP trunk acts as a virtual, scalable telephone line linking your infrastructure directly to the carrier network. When a caller dials your phone number, Vobiz routes the SIP INVITE to your configured endpoint URI — which could be a LiveKit SIP Service, a VAPI SIP endpoint, a Retell AI agent, an ElevenLabs integration, or your own SIP server.
+
+**End-to-end path for an AI voice agent:**
+
+1. **PSTN** — Human dials your Vobiz DID number
+2. **Vobiz** — Captures the call, authenticates, and proxies the INVITE to your trunk endpoint
+3. **Platform** — LiveKit / VAPI / Retell answers the SIP signaling
+4. **AI agent** — RTP audio processed through STT → LLM → TTS stream
+
+## Advantages of SIP trunking
+
+**Universal access.** SIP is the global standard for telephony. Every carrier, PBX, and managed AI voice platform speaks it.
+
+**Native call transfer.** SIP REFER allows live, invisible hand-offs from an AI agent to a human agent mid-call.
+
+**Enterprise integration.** SIP connects directly into corporate PBX systems — Avaya, Cisco UCM, Microsoft Teams Direct Routing — without any additional bridging layer.
+
+**Wideband audio.** G.722 at 16 kHz gives richer audio input, which meaningfully improves speech-to-text accuracy compared to narrowband G.711.
+
+## Friction points
+
+**Setup latency.** SIP INVITE handshakes add 1–5 seconds of connection overhead before audio begins.
+
+**Firewall traversal.** SIP uses UDP for signaling and RTP for media on separate ports. Asymmetric NAT and restrictive firewall rules frequently cause one-way audio or complete call failures.
+
+**Protocol mismatch.** SIP's concept of a call session does not map cleanly onto fluid AI interruptions, partial transcriptions, or LLM token streaming.
+
+**Silent failures.** ACL and URI routing misconfigurations present as dropped calls with no explicit error logs — making them among the hardest bugs to diagnose.
+
+## Platform compatibility
+
+<AccordionGroup>
+  <Accordion title="LiveKit — primary SIP hub">
+    LiveKit runs a bespoke SIP Service that absorbs Vobiz trunks and outputs standard SIP participants into your WebRTC rooms. It retains native encryption, Krisp noise filtering, and rapid SIP REFER transfers natively. SIP trunking is the primary and only supported path for PSTN connectivity with LiveKit.
+
+    [View LiveKit integration →](/integrations/livekit)
+  </Accordion>
+  <Accordion title="VAPI — unified telephony">
+    VAPI exposes a unified SIP destination that accepts BYO trunks directly. It supports deep custom SIP headers, enabling dynamic AI agent template injection from CRM lookups passed straight from the raw INVITE.
+
+    [View VAPI integration →](/integrations/vapi-dashboard)
+  </Accordion>
+  <Accordion title="Retell AI — elastic integration">
+    Retell AI delivers two paths: direct elastic Vobiz SIP trunk, or dynamic API registration hooks for controlled application flow binding before SIP connectivity.
+
+    [View Retell AI integration →](/integrations/retellai-dashboard)
+  </Accordion>
+  <Accordion title="ElevenLabs — native SIP">
+    ElevenLabs Conversational AI connects directly to PSTN calls via SIP trunking — no intermediary platform required. Point your Vobiz SIP trunk at ElevenLabs' SIP endpoint and inbound calls are answered directly by an ElevenLabs AI agent. ElevenLabs also provides standalone TTS, STT, and voice cloning services that other SIP-based pipelines (LiveKit agents, etc.) can consume as a voice synthesis layer.
+
+    [View ElevenLabs integration →](/integrations/elevenlabs-dashboard)
+  </Accordion>
+</AccordionGroup>
+
+## Developer pitfalls
+
+<AccordionGroup>
+  <Accordion title="1. Assumed authentication labels">
+    Dashboard display names are not SIP URI authentication digest targets. Using your dashboard profile name inside the SIP pipeline will universally trigger `401 Unauthorized` faults. Use the exact SIP username from your trunk credentials.
+  </Accordion>
+  <Accordion title="2. IP egress rotation">
+    Statically trusting platform IPs via firewall ACL is fragile. SaaS endpoints use large dynamic egress gateways — silent disconnections arrive whenever internal load balancing resets and a call arrives from a new IP.
+  </Accordion>
+  <Accordion title="3. The one-way audio effect">
+    If SIP signaling succeeds via TCP but your firewall silently drops UDP streams, callers hear the AI but the AI hears nothing (or vice versa). Always test audio in both directions, not just call establishment.
+  </Accordion>
+  <Accordion title="4. Inbound geographic locks">
+    Dialing international destination numbers triggers `403 Forbidden` unless geographic permissions have been explicitly enabled at the carrier level. Contact Vobiz support to unlock specific country codes.
+  </Accordion>
+</AccordionGroup>
+
+## When to choose SIP trunking
+
+Choose SIP when any of the following apply:
+
+- You are integrating with LiveKit, VAPI, Retell AI, or ElevenLabs
+- You need live call transfer to a human agent
+- You are connecting to enterprise PBX infrastructure (Avaya, Cisco UCM, Teams)
+- You are operating in a regulated industry that requires SRTP + TLS compliance
+- You are running fewer than 50,000 calls per month and want the fastest path to production
+
+<Tip>
+  If you need raw audio control, lower cost at scale, or want to use Pipecat or a direct Python pipeline, see [WebSocket streaming](/concepts/streaming-websockets) for the alternative architecture.
+</Tip>

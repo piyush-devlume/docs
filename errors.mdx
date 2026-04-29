@@ -1,0 +1,293 @@
+---
+title: "Error Handling: HTTP Codes, Error Format, and Fixes"
+description: "Vobiz API error reference: HTTP status codes, standardized JSON error format, common error codes with examples, and a troubleshooting checklist."
+sidebarTitle: "Errors"
+---
+
+All Vobiz API errors follow a consistent JSON format for easy parsing and debugging. Every error response includes a machine-readable code, a human-readable message, an optional details object, a timestamp, and a request ID you can use when contacting support.
+
+## Error response format
+
+```json
+{
+  "status": "error",
+  "error": {
+    "code": "INSUFFICIENT_BALANCE",
+    "message": "Account balance too low to complete this operation",
+    "details": {
+      "required": 1000,
+      "available": 450,
+      "currency": "USD"
+    }
+  },
+  "timestamp": "2025-10-12T10:30:00.000Z",
+  "requestId": "req_7a8b9c0d1e2f"
+}
+```
+
+### Response fields
+
+| Field | Description |
+|---|---|
+| `status` | Always `"error"` for error responses |
+| `error.code` | Machine-readable error code (uppercase, underscore-separated) |
+| `error.message` | Human-readable error description |
+| `error.details` | Additional context (optional, varies by error type) |
+| `timestamp` | ISO 8601 timestamp of when the error occurred |
+| `requestId` | Unique request identifier — include this when contacting support |
+
+## HTTP status codes
+
+### 2xx success
+
+| Code | Meaning |
+|---|---|
+| `200 OK` | Request successful, response contains data |
+| `201 Created` | Resource created successfully (e.g., trunk, sub-account) |
+| `204 No Content` | Request successful, no response body (e.g., DELETE operations) |
+
+### 4xx client errors
+
+| Code | Meaning |
+|---|---|
+| `400 Bad Request` | Invalid request format or parameters |
+| `401 Unauthorized` | Missing or invalid authentication credentials |
+| `402 Payment Required` | Insufficient account balance |
+| `403 Forbidden` | Authenticated but lacking permission for this resource |
+| `404 Not Found` | Requested resource does not exist |
+| `409 Conflict` | Request conflicts with current state (e.g., duplicate username) |
+| `422 Unprocessable Entity` | Validation failed — see `details` for field-level errors |
+| `429 Too Many Requests` | Rate limit or concurrency limit exceeded |
+
+### 5xx server errors
+
+| Code | Meaning |
+|---|---|
+| `500 Internal Server Error` | Unexpected server error — report via `requestId` |
+| `502 Bad Gateway` | Downstream service unavailable |
+| `503 Service Unavailable` | Service temporarily down or overloaded |
+| `504 Gateway Timeout` | Downstream service timeout |
+
+## Common errors
+
+### Authentication errors
+
+<AccordionGroup>
+  <Accordion title="INVALID_CREDENTIALS — 401">
+    Email/password combination is incorrect.
+
+    ```json
+    {
+      "status": "error",
+      "error": {
+        "code": "INVALID_CREDENTIALS",
+        "message": "Invalid email or password"
+      }
+    }
+    ```
+
+    **Fix:** Check that your `X-Auth-ID` and `X-Auth-Token` header values match exactly what appears in Account Settings.
+  </Accordion>
+  <Accordion title="TOKEN_EXPIRED — 401">
+    The access token has expired. Use a refresh token to obtain a new one.
+
+    ```json
+    {
+      "status": "error",
+      "error": {
+        "code": "TOKEN_EXPIRED",
+        "message": "Access token has expired. Use refresh token to obtain a new one."
+      }
+    }
+    ```
+
+    **Fix:** Implement automatic token refresh before expiration. See [best practices](/best-practices) for a token refresh pattern.
+  </Accordion>
+  <Accordion title="ACCOUNT_INACTIVE — 403">
+    The account has been deactivated.
+
+    ```json
+    {
+      "status": "error",
+      "error": {
+        "code": "ACCOUNT_INACTIVE",
+        "message": "Account is inactive. Contact support to reactivate."
+      }
+    }
+    ```
+
+    **Fix:** Contact Vobiz support to reactivate the account.
+  </Accordion>
+</AccordionGroup>
+
+### Resource errors
+
+<AccordionGroup>
+  <Accordion title="TRUNK_NOT_FOUND — 404">
+    The trunk ID does not exist or belongs to a different account.
+
+    ```json
+    {
+      "status": "error",
+      "error": {
+        "code": "TRUNK_NOT_FOUND",
+        "message": "SIP trunk not found",
+        "details": {
+          "trunkId": "TRK_invalid123"
+        }
+      }
+    }
+    ```
+
+    **Fix:** Verify the trunk ID from the console or a previous `GET /trunks` response. Confirm the trunk belongs to the account whose credentials you are using.
+  </Accordion>
+  <Accordion title="DUPLICATE_USERNAME — 409">
+    The trunk username already exists on this account.
+
+    ```json
+    {
+      "status": "error",
+      "error": {
+        "code": "DUPLICATE_USERNAME",
+        "message": "Username already exists",
+        "details": {
+          "username": "mytrunk",
+          "suggestion": "Try mytrunk2 or mytrunk_2025"
+        }
+      }
+    }
+    ```
+
+    **Fix:** Choose a different trunk username. Use the `suggestion` field in the error details as a starting point.
+  </Accordion>
+</AccordionGroup>
+
+### Balance and billing errors
+
+<AccordionGroup>
+  <Accordion title="INSUFFICIENT_BALANCE — 402">
+    Account balance is too low to complete the operation.
+
+    ```json
+    {
+      "status": "error",
+      "error": {
+        "code": "INSUFFICIENT_BALANCE",
+        "message": "Insufficient balance to purchase phone number",
+        "details": {
+          "required": 1000,
+          "available": 450,
+          "currency": "USD",
+          "shortfall": 550
+        }
+      }
+    }
+    ```
+
+    **Fix:** Add funds to your account in the console. The `shortfall` field tells you exactly how much more you need.
+  </Accordion>
+  <Accordion title="PAYMENT_FAILED — 402">
+    Payment processing failed.
+
+    ```json
+    {
+      "status": "error",
+      "error": {
+        "code": "PAYMENT_FAILED",
+        "message": "Payment declined by gateway",
+        "details": {
+          "gateway": "razorpay",
+          "reason": "Insufficient funds in linked account"
+        }
+      }
+    }
+    ```
+
+    **Fix:** Check the `reason` field for the gateway-specific error. Update your payment method or try a different card.
+  </Accordion>
+</AccordionGroup>
+
+### Rate limiting errors
+
+<AccordionGroup>
+  <Accordion title="RATE_LIMIT_EXCEEDED — 429">
+    Too many requests or calls — CPS or concurrency limit exceeded.
+
+    ```json
+    {
+      "status": "error",
+      "error": {
+        "code": "RATE_LIMIT_EXCEEDED",
+        "message": "CPS limit exceeded for this trunk",
+        "details": {
+          "limitType": "cps",
+          "limit": 10,
+          "current": 15,
+          "retryAfter": 1
+        }
+      }
+    }
+    ```
+
+    **Fix:** Slow your outbound dialing rate to stay within your CPS and concurrency limits. See the [FAQ on 429 errors](/faq#why-am-i-receiving-a-429-error) for details on how to pace requests. Purchase a higher concurrency or CPS limit if you legitimately need more capacity.
+  </Accordion>
+</AccordionGroup>
+
+## Validation errors
+
+When request validation fails (`422`), the response includes detailed field-level errors:
+
+```json
+{
+  "status": "error",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed",
+    "details": {
+      "errors": [
+        {
+          "field": "password",
+          "message": "Password must be at least 8 characters",
+          "code": "MIN_LENGTH",
+          "value": "abc"
+        },
+        {
+          "field": "email",
+          "message": "Invalid email format",
+          "code": "INVALID_FORMAT",
+          "value": "notanemail"
+        },
+        {
+          "field": "maxCps",
+          "message": "Must be between 1 and 1000",
+          "code": "OUT_OF_RANGE",
+          "value": 5000
+        }
+      ]
+    }
+  }
+}
+```
+
+Parse the `details.errors` array to display field-specific error messages in your UI. Each error includes the field name, error code, and the invalid value submitted.
+
+## Troubleshooting guide
+
+**Check the HTTP status code first.** The category tells you who is at fault: 4xx means fix your request; 5xx means retry or contact support.
+
+**Always log the `requestId`.** Save the `requestId` from every error response. When contacting support, provide this ID for faster debugging.
+
+**Implement exponential backoff.** For `429` (rate limit) and `503` (service unavailable) errors, retry with exponential backoff: wait 1 s, then 2 s, then 4 s. Check the `Retry-After` header if present.
+
+**Validate before sending.** Implement client-side validation that matches API requirements to catch errors before making requests. Reduces unnecessary API calls and improves user experience.
+
+**Monitor error rates.** Track error response counts and types over time. Sudden spikes in specific error codes may indicate configuration issues or API changes requiring attention.
+
+### Common 401 fixes
+
+<Note>
+  If you receive repeated `401 Unauthorized` responses, check the following:
+  - Confirm `X-Auth-ID` and `X-Auth-Token` headers are included in every request
+  - Verify the token has not expired
+  - Confirm the account is active (`is_active: true` in Account Settings)
+</Note>

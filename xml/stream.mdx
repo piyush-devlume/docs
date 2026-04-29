@@ -1,0 +1,374 @@
+---
+title: "Stream: Real-Time Audio via WebSocket"
+description: "Stream pipes live call audio to a WebSocket server for real-time transcription, AI voice assistants, sentiment analysis, and bidirectional audio playback."
+sidebarTitle: "Stream"
+---
+
+The `<Stream>` element forks the call audio and sends it to an external WebSocket server in near real time. This unlocks use cases that require processing the live audio stream — real-time transcription, sentiment analysis, AI-powered call assistants, and custom audio injection. When you set `bidirectional="true"`, your WebSocket server can also send audio back to the caller, making it possible to build fully interactive voice applications without storing the audio first.
+
+## Attributes
+
+<ParamField body="contentType" type="string" default="audio/x-l16;rate=8000">
+  Preferred audio codec and sample rate for the stream.
+
+  **Allowed values:**
+  - `audio/x-l16;rate=8000` — Linear PCM 16-bit at 8 kHz
+  - `audio/x-l16;rate=16000` — Linear PCM 16-bit at 16 kHz
+  - `audio/x-mulaw;rate=8000` — μ-law at 8 kHz
+</ParamField>
+
+<ParamField body="audioTrack" type="string" default="inbound">
+  Which audio track Vobiz forks to the WebSocket.
+
+  **Allowed values:** `inbound`, `outbound`, `both`
+
+  <Warning>
+    When `bidirectional="true"`, do not set `audioTrack` to `outbound` or `both`. Use `inbound` (the default) for bidirectional streams.
+  </Warning>
+</ParamField>
+
+<ParamField body="bidirectional" type="boolean">
+  When `true`, the stream is read/write. Your WebSocket server can send `playAudio`, `clearAudio`, and `checkpoint` events back through the connection.
+</ParamField>
+
+<ParamField body="keepCallAlive" type="boolean" default="false">
+  When `true`, Vobiz waits for the stream to end before processing subsequent XML elements, keeping the call alive. Requires `bidirectional="true"`.
+
+  <Note>
+    Without `keepCallAlive="true"`, `<Stream>` starts the background stream and finishes immediately. If there are no further XML elements, the call hangs up. Use `keepCallAlive` instead of `<Wait>` for a cleaner implementation.
+  </Note>
+</ParamField>
+
+<ParamField body="streamTimeout" type="integer" default="86400">
+  Maximum streaming duration in seconds. Streaming stops after this limit regardless of call state.
+
+  **Allowed values:** positive integer
+</ParamField>
+
+<ParamField body="statusCallbackUrl" type="string">
+  URL that receives HTTP notifications for `StartStream`, `PlayedStream`, and `StopStream` lifecycle events.
+</ParamField>
+
+<ParamField body="statusCallbackMethod" type="string" default="POST">
+  HTTP method used when calling `statusCallbackUrl`.
+
+  **Allowed values:** `GET`, `POST`
+</ParamField>
+
+<ParamField body="extraHeaders" type="string">
+  Custom `key=value` pairs sent to your WebSocket server alongside the audio stream. Maximum 512 bytes. Only alphanumeric characters allowed in keys and values.
+
+  **Example:** `test1=abc,test2=xyz`
+</ParamField>
+
+## WebSocket message format
+
+When Vobiz connects to your WebSocket server, it exchanges the following JSON messages.
+
+### Connection start
+
+Vobiz sends this once when the stream is established.
+
+```json
+{
+  "sequenceNumber": 0,
+  "event": "start",
+  "start": {
+    "callId": "056b9e90-502c-448a-9a4b-8c0aa82d01da",
+    "streamId": "b51f945c-fa36-4eb0-9ae7-30770dc94cad",
+    "auth_id": "511538",
+    "tracks": ["inbound"],
+    "mediaFormat": { "encoding": "audio/x-l16", "sampleRate": 8000 }
+  },
+  "extra_headers": "{}"
+}
+```
+
+### Audio data
+
+Vobiz sends these continuously during the stream.
+
+```json
+{
+  "event": "media",
+  "streamId": "20170ada-f610-433b-8758-c02a2aab3662",
+  "media": {
+    "payload": "base64-encoded-audio-data...",
+    "contentType": "audio/x-mulaw",
+    "sampleRate": 8000,
+    "timestamp": 1634567890123
+  }
+}
+```
+
+### Stream stop
+
+Vobiz sends this when the stream ends.
+
+```json
+{
+  "event": "stop",
+  "streamId": "20170ada-f610-433b-8758-c02a2aab3662",
+  "reason": "call_ended"
+}
+```
+
+## WebSocket events you can send (bidirectional)
+
+When `bidirectional="true"`, your server can send these events back to Vobiz.
+
+| Event | Description |
+|---|---|
+| `playAudio` | Play base64-encoded PCM or μ-law audio to the caller. |
+| `clearAudio` | Interrupt and discard all buffered audio. |
+| `checkpoint` | Mark a position in the audio queue. Vobiz responds with `playedStream` when all audio before the checkpoint has played. |
+
+See [Stream Events](/xml/stream#stream-events-reference) below for the full format of each event.
+
+## HTTP status callback events
+
+Configure `statusCallbackUrl` to receive HTTP notifications for these events.
+
+<Tabs>
+  <Tab title="StartStream">
+    Fired when the WebSocket connection is established and streaming begins.
+
+    ```bash
+    POST /stream-status HTTP/1.1
+    Host: yourapp.com
+    Content-Type: application/x-www-form-urlencoded
+
+    From=918071387423&To=919624705678
+    &CallUUID=9a0e0208-d01a-4572-9a04-fe583a05ac53
+    &Event=StartStream
+    &StreamID=227d997a-0af4-447c-a3f3-b243e902e527
+    &ServiceURL=ws://stream.vobiz.ai/ws
+    &Timestamp=2025-11-06 09:58:40
+    ```
+  </Tab>
+  <Tab title="PlayedStream">
+    Fired when all audio queued before a checkpoint has been played successfully. The `Name` field contains the checkpoint name you specified.
+
+    ```bash
+    POST /stream-status HTTP/1.1
+    Host: yourapp.com
+    Content-Type: application/x-www-form-urlencoded
+
+    From=918071387423&To=919624705678
+    &CallUUID=9a0e0208-d01a-4572-9a04-fe583a05ac53
+    &Event=PlayedStream
+    &StreamID=227d997a-0af4-447c-a3f3-b243e902e527
+    &Name=first
+    &Timestamp=2025-11-06 09:58:46
+    ```
+  </Tab>
+  <Tab title="StopStream">
+    Fired when streaming ends, whether due to timeout, call hangup, WebSocket close, or a network error.
+
+    ```bash
+    POST /stream-status HTTP/1.1
+    Host: yourapp.com
+    Content-Type: application/x-www-form-urlencoded
+
+    From=918071387423&To=919624705678
+    &CallUUID=9a0e0208-d01a-4572-9a04-fe583a05ac53
+    &Event=StopStream
+    &StreamID=227d997a-0af4-447c-a3f3-b243e902e527
+    &Timestamp=2025-11-06 09:58:50
+    ```
+  </Tab>
+</Tabs>
+
+### Common status callback parameters
+
+| Parameter | Description |
+|---|---|
+| `CallUUID` | Unique identifier for the call. |
+| `StreamID` | Unique identifier for this streaming session. |
+| `Event` | Event type: `StartStream`, `PlayedStream`, or `StopStream`. |
+| `From` | Caller's phone number. |
+| `To` | Called phone number. |
+| `Timestamp` | When the event occurred. |
+| `Name` | Checkpoint name (`PlayedStream` only). |
+| `ServiceURL` | WebSocket URL (`StartStream` only). |
+
+## Stream events reference
+
+### playAudio
+
+Send audio to the caller from your WebSocket server.
+
+```json
+{
+  "event": "playAudio",
+  "media": {
+    "contentType": "audio/x-l16",
+    "sampleRate": 8000,
+    "payload": "base64-encoded-raw-audio..."
+  }
+}
+```
+
+**Audio format requirements:**
+- Send raw PCM (16-bit little-endian, mono) or μ-law data — no WAV headers.
+- Match `contentType` and `sampleRate` exactly to your actual audio data.
+- Use chunk sizes of 20–60 ms (320–960 bytes at 8 kHz 16-bit) for best latency.
+
+### clearAudio
+
+Interrupt and clear all buffered audio immediately.
+
+```json
+{
+  "event": "clearAudio",
+  "streamId": "20170ada-f610-433b-8758-c02a2aab3662"
+}
+```
+
+### checkpoint
+
+Mark a point in the audio queue. Vobiz sends a `playedStream` acknowledgment (via both WebSocket and `statusCallbackUrl`) once all audio queued before this checkpoint has finished playing.
+
+```json
+{
+  "event": "checkpoint",
+  "streamId": "20170ada-f610-433b-8758-c02a2aab3662",
+  "name": "greeting-complete"
+}
+```
+
+**Vobiz response:**
+
+```json
+{
+  "event": "playedStream",
+  "streamId": "20170ada-f610-433b-8758-c02a2aab3662",
+  "name": "greeting-complete"
+}
+```
+
+## Examples
+
+### Basic one-way stream
+
+Stream inbound audio from the call to your WebSocket server.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Stream>wss://stream.yourapp.com/audio</Stream>
+</Response>
+```
+
+### Bidirectional stream with AI assistant
+
+Enable two-way audio so your AI backend can respond to the caller in real time.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Stream
+        bidirectional="true"
+        keepCallAlive="true"
+        contentType="audio/x-l16;rate=16000"
+        statusCallbackUrl="https://yourapp.com/stream-status">
+        wss://stream.yourapp.com/assistant
+    </Stream>
+</Response>
+```
+
+### Stream both tracks with timeout
+
+Record inbound and outbound audio for up to one hour with custom session headers.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Stream
+        audioTrack="both"
+        streamTimeout="3600"
+        statusCallbackUrl="https://yourapp.com/stream-status"
+        statusCallbackMethod="POST"
+        extraHeaders="session=abc123,agent=john">
+        wss://stream.yourapp.com/recording
+    </Stream>
+    <Speak>Thank you for calling. We are processing your request.</Speak>
+</Response>
+```
+
+### Node.js WebSocket server
+
+Receive and process audio from Vobiz.
+
+```javascript
+const WebSocket = require('ws');
+
+const wss = new WebSocket.Server({ port: 8080 });
+
+wss.on('connection', (ws) => {
+  console.log('Vobiz connected');
+
+  ws.on('message', (message) => {
+    const data = JSON.parse(message);
+
+    if (data.event === 'start') {
+      console.log('Stream started:', data.start.streamId);
+    } else if (data.event === 'media') {
+      const audio = Buffer.from(data.media.payload, 'base64');
+      // Send to your transcription or AI service
+    } else if (data.event === 'stop') {
+      console.log('Stream ended:', data.reason);
+    }
+  });
+});
+```
+
+### Python WebSocket server
+
+```python
+import asyncio
+import websockets
+import json
+import base64
+
+async def handle_stream(websocket, path):
+    print("Vobiz connected")
+    async for message in websocket:
+        data = json.loads(message)
+
+        if data['event'] == 'start':
+            print(f"Stream ID: {data['start']['streamId']}")
+        elif data['event'] == 'media':
+            audio = base64.b64decode(data['media']['payload'])
+            # Process audio
+        elif data['event'] == 'stop':
+            print(f"Stopped: {data.get('reason')}")
+
+async def main():
+    async with websockets.serve(handle_stream, "0.0.0.0", 8080):
+        await asyncio.Future()
+
+asyncio.run(main())
+```
+
+### Handle status callbacks
+
+```javascript
+app.post('/stream-status', (req, res) => {
+  const { Event, StreamID, CallUUID, Name } = req.body;
+
+  switch (Event) {
+    case 'StartStream':
+      console.log(`Stream started: ${StreamID} on call ${CallUUID}`);
+      break;
+    case 'PlayedStream':
+      console.log(`Checkpoint "${Name}" reached on stream ${StreamID}`);
+      break;
+    case 'StopStream':
+      console.log(`Stream ended: ${StreamID}`);
+      break;
+  }
+
+  res.status(200).send('OK');
+});
+```

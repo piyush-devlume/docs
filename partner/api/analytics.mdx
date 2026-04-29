@@ -1,0 +1,268 @@
+---
+title: "Partner API: Dashboard and Call Analytics"
+sidebarTitle: "Dashboard & analytics"
+description: "GET a live dashboard snapshot and date-range call analytics across all customer accounts. Identify top spenders and audit call volumes for billing cycles."
+---
+
+Two endpoints give you aggregated intelligence across your entire partner ecosystem. The dashboard endpoint returns a live snapshot for health checks and landing pages. The analytics endpoint returns aggregated call metrics over a date range for billing cycles, trend analysis, and identifying top-spending customers.
+
+| Endpoint | What it returns | Best for |
+|---|---|---|
+| `GET /dashboard` | Live counts, balances, today's call volume | Dashboard landing page, health monitoring |
+| `GET /analytics` | Aggregated call metrics, cost, top spenders | Billing cycles, customer reports, trend analysis |
+
+---
+
+## Partner dashboard
+
+**`GET https://api.vobiz.ai/api/v1/partner/dashboard`**
+
+Returns a high-level snapshot of your partner account: total active customer accounts, combined wallet balances, total calls today, and platform-level status indicators.
+
+### Response fields
+
+<ResponseField name="active_accounts" type="integer">
+  Number of active customer accounts under your partner umbrella.
+</ResponseField>
+
+<ResponseField name="total_balance" type="number">
+  Combined wallet balance across all customer accounts.
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  Currency of the balance values (e.g. `INR`).
+</ResponseField>
+
+<ResponseField name="calls_today" type="integer">
+  Total call attempts across all customers today.
+</ResponseField>
+
+<ResponseField name="calls_this_month" type="integer">
+  Total call attempts across all customers in the current calendar month.
+</ResponseField>
+
+<ResponseField name="total_spend_this_month" type="number">
+  Total charges across all customer accounts in the current month.
+</ResponseField>
+
+<ResponseField name="accounts_low_balance" type="integer">
+  Count of customers with balance below the configured low-balance threshold. Proactively recharge these wallets before calls start failing.
+</ResponseField>
+
+<ResponseField name="accounts_suspended" type="integer">
+  Count of customer accounts that are currently suspended.
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/dashboard" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "https://api.vobiz.ai/api/v1/partner/dashboard",
+    headers={
+        "X-Auth-ID": "{your_partner_id}",
+        "X-Auth-Token": "{your_auth_token}",
+        "Accept": "application/json",
+    },
+)
+
+dashboard = response.json()
+print(f"Active accounts: {dashboard['active_accounts']}")
+print(f"Calls today: {dashboard['calls_today']}")
+if dashboard["accounts_low_balance"] > 0:
+    print(f"Warning: {dashboard['accounts_low_balance']} accounts have low balance")
+```
+
+</CodeGroup>
+
+```json
+{
+  "active_accounts": 47,
+  "total_balance": 284500.00,
+  "currency": "INR",
+  "calls_today": 1284,
+  "calls_this_month": 38420,
+  "total_spend_this_month": 17289.00,
+  "accounts_low_balance": 3,
+  "accounts_suspended": 1
+}
+```
+
+<Tip>
+  Poll `accounts_low_balance` on a schedule and automatically trigger balance transfers to customers below your minimum threshold to prevent call failures.
+</Tip>
+
+---
+
+## Partner analytics
+
+**`GET https://api.vobiz.ai/api/v1/partner/analytics`**
+
+Returns aggregated call analytics across all your customer accounts. Defaults to the last 30 days. Pass `from_date` and `to_date` for a custom window.
+
+### Query parameters
+
+<ParamField query="from_date" type="string">
+  Start date in `YYYY-MM-DD` format. Defaults to 30 days ago.
+</ParamField>
+
+<ParamField query="to_date" type="string">
+  End date in `YYYY-MM-DD` format. Defaults to today.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="period" type="object">
+  Actual date range of the response.
+
+  <Expandable title="properties">
+    <ResponseField name="from" type="string">
+      Start date of the reporting period.
+    </ResponseField>
+    <ResponseField name="to" type="string">
+      End date of the reporting period.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="totals" type="object">
+  Aggregated metrics for the entire period across all customers.
+
+  <Expandable title="properties">
+    <ResponseField name="total_calls" type="integer">
+      Total call attempts across all customers.
+    </ResponseField>
+    <ResponseField name="answered_calls" type="integer">
+      Calls that were successfully answered and connected.
+    </ResponseField>
+    <ResponseField name="failed_calls" type="integer">
+      Calls that failed (busy, no answer, network error).
+    </ResponseField>
+    <ResponseField name="total_duration_seconds" type="integer">
+      Combined call duration in seconds across all customers.
+    </ResponseField>
+    <ResponseField name="total_cost" type="number">
+      Total charges across all customer accounts in the period.
+    </ResponseField>
+    <ResponseField name="currency" type="string">
+      Currency of the cost values.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="by_direction" type="object">
+  Breakdown of call totals by inbound vs. outbound direction.
+
+  <Expandable title="properties">
+    <ResponseField name="inbound" type="object">
+      Total `calls` and `cost` for inbound calls.
+    </ResponseField>
+    <ResponseField name="outbound" type="object">
+      Total `calls` and `cost` for outbound calls.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="top_customers" type="array">
+  Array of highest-spending customers by total cost, sorted descending.
+
+  <Expandable title="properties">
+    <ResponseField name="auth_id" type="string">Customer `auth_id`.</ResponseField>
+    <ResponseField name="name" type="string">Customer display name.</ResponseField>
+    <ResponseField name="calls" type="integer">Total call count for the period.</ResponseField>
+    <ResponseField name="cost" type="number">Total cost for the period.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash Last 30 days (default)
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/analytics" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```bash Custom date range
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/analytics?from_date=2026-01-01&to_date=2026-03-31" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "https://api.vobiz.ai/api/v1/partner/analytics",
+    headers={
+        "X-Auth-ID": "{your_partner_id}",
+        "X-Auth-Token": "{your_auth_token}",
+        "Accept": "application/json",
+    },
+    params={
+        "from_date": "2026-01-01",
+        "to_date": "2026-03-31",
+    },
+)
+
+analytics = response.json()
+totals = analytics["totals"]
+failure_rate = totals["failed_calls"] / totals["total_calls"] * 100
+print(f"Total cost: {totals['total_cost']} {totals['currency']}")
+print(f"Failure rate: {failure_rate:.1f}%")
+
+print("Top customers:")
+for customer in analytics["top_customers"]:
+    print(f"  {customer['name']}: {customer['calls']} calls, {customer['cost']}")
+```
+
+</CodeGroup>
+
+```json
+{
+  "period": {
+    "from": "2026-01-01",
+    "to": "2026-03-31"
+  },
+  "totals": {
+    "total_calls": 124830,
+    "answered_calls": 118204,
+    "failed_calls": 6626,
+    "total_duration_seconds": 7482600,
+    "total_cost": 336717.00,
+    "currency": "INR"
+  },
+  "by_direction": {
+    "inbound": { "calls": 61200, "cost": 165840.00 },
+    "outbound": { "calls": 63630, "cost": 170877.00 }
+  },
+  "top_customers": [
+    { "auth_id": "MA_48149cf4", "name": "Credresolve", "calls": 18420, "cost": 82890.00 },
+    { "auth_id": "MA_99ab12c3", "name": "Acme Outbound", "calls": 15300, "cost": 68850.00 }
+  ]
+}
+```
+
+---
+
+## Use cases
+
+**Monthly billing cycle.** Pull analytics for the billing month to calculate total usage, generate invoices, and reconcile with your transaction ledger.
+
+**Identify top spenders.** Use `top_customers` to find your highest-revenue accounts for account management prioritization and proactive recharging.
+
+**Call failure analysis.** Monitor the `failed_calls` / `total_calls` ratio over time. A rising failure rate indicates network quality issues or configuration problems requiring investigation.
+
+**Inbound vs. outbound split.** Use `by_direction` to understand your customer base. Outbound-heavy customers have different pricing and capacity needs than inbound-heavy ones.

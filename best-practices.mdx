@@ -1,0 +1,347 @@
+---
+title: "Best Practices for Building on the Vobiz Platform"
+description: "Guidance on security, authentication, performance, reliability, and testing for building safe, scalable Vobiz integrations in production."
+sidebarTitle: "Best practices"
+---
+
+These recommendations reflect hard-won experience from production Vobiz integrations. Follow them to avoid common pitfalls, protect your credentials, and build reliable applications that hold up under load.
+
+## Security
+
+### Never hardcode credentials
+
+Store API keys, tokens, and passwords in environment variables or a secrets manager — never in source code.
+
+<CodeGroup>
+
+```javascript Bad practice — never do this
+const API_KEY = "sk_live_abc123def456";  // NEVER hardcode credentials
+const PASSWORD = "my_secret_password";   // NEVER hardcode credentials
+```
+
+```javascript Good practice — use environment variables
+// Load from environment variables
+const API_KEY = process.env.VOBIZ_API_KEY;
+const PASSWORD = process.env.VOBIZ_PASSWORD;
+
+// Or use a secrets manager
+const secrets = await secretsManager.getSecret("vobiz/credentials");
+```
+
+</CodeGroup>
+
+### Use HTTPS for all requests
+
+Always use `https://` URLs when calling the API. Never send authentication tokens or sensitive data over unencrypted HTTP. The Vobiz API only responds to HTTPS.
+
+### Rotate credentials regularly
+
+- Change trunk passwords every 90 days
+- Change account passwords regularly and invalidate old refresh tokens
+- Immediately rotate any credential you suspect has been compromised
+- Use sub-accounts for different applications and teams to limit blast radius if one credential leaks
+
+### Whitelist IP addresses for production trunks
+
+For production SIP trunks with static IPs, use IP authentication instead of passwords. This eliminates password-based attacks and simplifies configuration for trusted systems.
+
+```json
+{
+  "authType": "ip",
+  "ipWhitelist": [
+    "203.0.113.10",
+    "203.0.113.11"
+  ]
+}
+```
+
+### Validate input on the client side
+
+Before sending requests, sanitize and validate all user-provided input:
+
+- Sanitize phone numbers — remove special characters and validate E.164 format
+- Validate email addresses against RFC 5322
+- Enforce string length limits on trunk names, usernames, and other fields
+- Reject suspicious patterns (SQL injection attempts, XSS payloads)
+
+## Authentication and authorization
+
+### Token storage
+
+<Tabs>
+  <Tab title="Frontend applications">
+    - Store access tokens in memory or `sessionStorage` (expires when the tab closes)
+    - Never store tokens in `localStorage` — it is vulnerable to XSS attacks
+    - Use `httpOnly` cookies for refresh tokens when possible
+  </Tab>
+  <Tab title="Backend applications">
+    - Store tokens in environment variables or a secrets manager
+    - Encrypt tokens at rest if storing them in a database
+    - Use secure in-memory storage for short-lived tokens
+  </Tab>
+</Tabs>
+
+### Implement automatic token refresh
+
+Refresh access tokens proactively before they expire rather than waiting for a `401` error:
+
+```javascript
+async function makeAuthenticatedRequest(url, options) {
+  // Refresh if the token expires in the next 5 minutes
+  if (tokenExpiresAt - Date.now() < 5 * 60 * 1000) {
+    await refreshAccessToken();
+  }
+
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      'Authorization': `Bearer ${accessToken}`
+    }
+  });
+}
+
+async function refreshAccessToken() {
+  const response = await fetch('https://api.vobiz.ai/api/v1/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken })
+  });
+
+  const data = await response.json();
+  accessToken = data.access_token;
+  tokenExpiresAt = Date.now() + (30 * 60 * 1000);
+}
+```
+
+### Use sub-accounts for separation
+
+Create separate sub-accounts for different environments, applications, and teams:
+
+- **Development** — separate sub-account for testing with separate credentials
+- **Production** — dedicated sub-account with stricter access controls
+- **Partners** — individual sub-accounts for each integration partner
+- **Departments** — sales, support, and engineering teams each get their own sub-account
+
+## Performance
+
+### Cache infrequently changing data
+
+Reduce API call volume by caching data that changes rarely:
+
+| Resource | Cache TTL | Notes |
+|---|---|---|
+| Account info | 15 minutes | Rarely changes |
+| Trunk list | 5 minutes | Invalidate on create or delete |
+| Balance | 1 minute | Frequently updated |
+| CDRs | No cache | Always fetch fresh |
+
+### Paginate large datasets
+
+Fetch records in batches rather than requesting all data at once:
+
+```javascript
+async function getAllCDRs(auth_id, startDate, endDate) {
+  const allCDRs = [];
+  let offset = 0;
+  const limit = 100;
+
+  while (true) {
+    const response = await fetch(
+      `https://api.vobiz.ai/api/v1/account/${auth_id}/cdr` +
+      `?start_date=${startDate}&end_date=${endDate}&limit=${limit}&offset=${offset}`
+    );
+    const data = await response.json();
+
+    allCDRs.push(...data.data.cdrs);
+
+    if (!data.data.pagination.hasMore) break;
+    offset += limit;
+  }
+
+  return allCDRs;
+}
+```
+
+### Batch queries and operations
+
+- Query CDRs over date ranges rather than one day at a time
+- Combine resource updates in a single transaction where possible
+- Use bulk export for large dataset extractions
+
+### Use connection pooling
+
+Reuse HTTP connections to avoid the overhead of creating a new TCP connection for every request:
+
+```javascript
+const https = require('https');
+
+const agent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 50,
+  maxFreeSockets: 10,
+  timeout: 60000
+});
+
+fetch(url, { agent });
+```
+
+## Reliability and error handling
+
+### Retry with exponential backoff
+
+For transient errors (`429`, `502`, `503`, `504`), retry with increasing wait times between attempts:
+
+```javascript
+async function fetchWithRetry(url, options, maxRetries = 3) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // Do not retry 4xx client errors
+      if (response.status >= 400 && response.status < 500) {
+        return response;
+      }
+
+      if (response.ok) return response;
+
+      if (attempt === maxRetries) {
+        throw new Error(`Failed after ${maxRetries} retries`);
+      }
+
+      // Exponential backoff: 1s, 2s, 4s, 8s...
+      const delay = Math.pow(2, attempt) * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+
+    } catch (error) {
+      if (attempt === maxRetries) throw error;
+
+      const delay = Math.pow(2, attempt) * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
+```
+
+### Implement a circuit breaker
+
+Prevent cascading failures when a downstream service is degraded:
+
+- Track consecutive failures per service
+- After 5 failures, open the circuit and fail fast for 30 seconds
+- After the timeout, allow one probe request through (half-open state)
+- If the probe succeeds, close the circuit; if it fails, reopen for a longer interval
+
+### Handle rate limits gracefully
+
+When you receive a `429` response, respect the `Retry-After` header before retrying:
+
+```javascript
+async function handleRateLimit(response) {
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('Retry-After') || 60;
+
+    console.log(`Rate limited. Retrying after ${retryAfter} seconds`);
+
+    await new Promise(resolve =>
+      setTimeout(resolve, retryAfter * 1000)
+    );
+
+    return fetch(url, options);
+  }
+
+  return response;
+}
+```
+
+### Use idempotency keys for critical operations
+
+For purchases and transactions, send an idempotency key to prevent duplicate operations if you retry a request:
+
+```javascript
+const idempotencyKey = `purchase-${Date.now()}-${Math.random()}`;
+
+await fetch('https://api.vobiz.ai/api/v1/account/ACC123/numbers/purchase', {
+  method: 'POST',
+  headers: {
+    'Idempotency-Key': idempotencyKey,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ phoneNumber: '+14155551234' })
+});
+```
+
+## Monitoring and logging
+
+### Log all API requests
+
+Maintain structured logs for debugging and auditing:
+
+```javascript
+function logAPIRequest(method, url, status, duration, requestId) {
+  console.log({
+    timestamp: new Date().toISOString(),
+    method,
+    url,
+    status,
+    duration: `${duration}ms`,
+    requestId,
+    service: 'vobiz-api'
+  });
+}
+```
+
+### Track key metrics
+
+Monitor the following signals continuously in production:
+
+- API request success and failure rates
+- Average response times per endpoint
+- Error distribution by error code
+- Token refresh frequency
+- Account balance consumption rate
+- Call success rates (ASR — Answer Seizure Ratio)
+- Rate limit violation frequency
+
+### Set up alerts
+
+Configure alerts for critical events:
+
+| Alert | Threshold |
+|---|---|
+| Balance low | When balance drops below your operating threshold |
+| Error spike | When error rate exceeds 5% of requests |
+| Trunk authentication failures | When a trunk fails authentication repeatedly |
+| Rate limit approaching | When CPS or concurrency approaches your limit |
+
+## Testing
+
+### Use separate accounts for testing
+
+Create dedicated test accounts or sub-accounts with separate credentials. Never test in production with real customer data or active trunks.
+
+### Test error scenarios
+
+Do not only test happy paths. Verify your application handles errors correctly: invalid credentials, insufficient balance, rate limits, network timeouts, and malformed requests.
+
+### Automate integration tests
+
+Add automated API tests to your CI/CD pipeline to catch regressions early. Run tests on every commit to the main branch.
+
+### Monitor test call quality
+
+Make regular test calls and verify:
+
+- Call connects within 3 seconds (low PDD — Post Dial Delay)
+- Audio quality is clear — no packet loss or one-way audio
+- CDR is generated correctly after the call ends
+- Account balance is debited accurately
+
+### Load test before going live
+
+Before launching a production workload, run load tests to verify your integration holds up under expected concurrency:
+
+- Simulate your expected CPS (calls per second) rate
+- Test your concurrent call limits
+- Verify rate limiting behaves as expected at the boundary
+- Monitor API response times under sustained load

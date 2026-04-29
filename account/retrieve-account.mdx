@@ -1,0 +1,288 @@
+---
+title: "Retrieve your Vobiz account details"
+description: "GET your Vobiz account details including auth credentials, billing configuration, enabled feature flags, API rate limits, and current pricing tier."
+sidebarTitle: "Retrieve account"
+---
+
+Use this endpoint to fetch every detail associated with your Vobiz account in a single request. The response includes your authentication credentials, billing mode, call capacity limits, feature toggles, and the full pricing tier object that governs per-minute rates and billing increments.
+
+**GET** `https://api.vobiz.ai/api/v1/auth/me`
+
+## Request
+
+No parameters are required. Send the request with your authentication headers only.
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET https://api.vobiz.ai/api/v1/auth/me \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+url = "https://api.vobiz.ai/api/v1/auth/me"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.get(url, headers=headers)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const response = await axios.get("https://api.vobiz.ai/api/v1/auth/me", {
+  headers: {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+  },
+});
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response fields
+
+<ResponseField name="id" type="string">
+  Unique account identifier (e.g., `MA_XXXXXX`).
+</ResponseField>
+
+<ResponseField name="api_id" type="string">
+  Internal API reference identifier.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the account or company.
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  Email address associated with the account.
+</ResponseField>
+
+<ResponseField name="phone" type="string">
+  Primary phone number for the account.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Account type. Values: `MASTER`, `SUB_ACCOUNT`.
+</ResponseField>
+
+<ResponseField name="auth_id" type="string">
+  Authentication ID used for API requests.
+</ResponseField>
+
+<ResponseField name="auth_secret" type="string">
+  Secret key for authentication. Only shown in secure contexts.
+</ResponseField>
+
+<ResponseField name="auth_token_expire_time" type="string">
+  ISO 8601 timestamp when the current auth token expires.
+</ResponseField>
+
+<ResponseField name="timezone" type="string">
+  Local timezone of the account (e.g., `America/Los_Angeles`).
+</ResponseField>
+
+<ResponseField name="account_type" type="string">
+  Billing model. Values: `PREPAID`, `POSTPAID`.
+</ResponseField>
+
+<ResponseField name="postpaid" type="boolean">
+  Whether the account is on a postpaid billing plan.
+</ResponseField>
+
+<ResponseField name="auto_recharge" type="boolean">
+  Whether auto-recharge is enabled for prepaid accounts.
+</ResponseField>
+
+<ResponseField name="enabled" type="boolean">
+  Whether the account is enabled for service.
+</ResponseField>
+
+<ResponseField name="is_active" type="boolean">
+  Whether the account is currently active.
+</ResponseField>
+
+<ResponseField name="is_verified" type="boolean">
+  Whether the account identity has been verified.
+</ResponseField>
+
+<ResponseField name="is_trial_account" type="boolean">
+  Indicates if this is a trial account.
+</ResponseField>
+
+<ResponseField name="cps_limit" type="number">
+  Current calls per second limit.
+</ResponseField>
+
+<ResponseField name="concurrent_calls_limit" type="number">
+  Current concurrent calls limit.
+</ResponseField>
+
+<ResponseField name="base_cps_limit" type="number">
+  Base CPS limit before any purchased add-ons.
+</ResponseField>
+
+<ResponseField name="base_concurrent_calls_limit" type="number">
+  Base concurrent calls limit before any purchased add-ons.
+</ResponseField>
+
+<ResponseField name="purchased_cps" type="number">
+  Additional CPS purchased by the account.
+</ResponseField>
+
+<ResponseField name="purchased_concurrent_calls" type="number">
+  Additional concurrent calls purchased by the account.
+</ResponseField>
+
+<ResponseField name="credit_limit" type="string">
+  Maximum credit allowed for postpaid accounts.
+</ResponseField>
+
+<ResponseField name="risk_rating" type="string">
+  Risk assessment rating (e.g., `LOW`, `MEDIUM`).
+</ResponseField>
+
+<ResponseField name="risk_status" type="string">
+  Current risk status (e.g., `NORMAL`, `FLAGGED`).
+</ResponseField>
+
+<ResponseField name="ip_auth_enabled" type="boolean">
+  Whether IP authentication is enabled for API access.
+</ResponseField>
+
+<ResponseField name="ip_whitelist_rules" type="array">
+  List of IP addresses or CIDR blocks allowed for API access.
+</ResponseField>
+
+<ResponseField name="allow_aws_ips" type="boolean">
+  Whether AWS IP ranges are permitted for API access.
+</ResponseField>
+
+<ResponseField name="features" type="object">
+  Map of enabled features such as `call_queue` and `transcription_enabled`.
+</ResponseField>
+
+<ResponseField name="pricing_tier_id" type="string">
+  Unique identifier of the pricing tier assigned to this account.
+</ResponseField>
+
+<ResponseField name="pricing_tier" type="object">
+  <Expandable title="pricing_tier fields">
+    <ResponseField name="id" type="string">
+      Unique identifier for the pricing tier.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Name of the pricing tier (e.g., `baseTier`).
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Description of the pricing plan.
+    </ResponseField>
+    <ResponseField name="currency" type="string">
+      Currency code (e.g., `USD`, `INR`).
+    </ResponseField>
+    <ResponseField name="rate_per_minute" type="string">
+      Cost per minute of call time in the specified currency.
+    </ResponseField>
+    <ResponseField name="billing_increment_seconds" type="integer">
+      Billing granularity in seconds (e.g., `60` = billed by full minutes).
+    </ResponseField>
+    <ResponseField name="minimum_duration_seconds" type="integer">
+      Minimum billable duration in seconds.
+    </ResponseField>
+    <ResponseField name="is_active" type="boolean">
+      Whether this pricing tier is currently active.
+    </ResponseField>
+    <ResponseField name="is_default" type="boolean">
+      Whether this is the default pricing tier.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp when the account was created.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 timestamp when the account was last updated.
+</ResponseField>
+
+<ResponseField name="last_login" type="string">
+  ISO 8601 timestamp of the most recent login.
+</ResponseField>
+
+## Example response
+
+```json 200 OK
+{
+  "id": "MA_XXXXXX",
+  "api_id": "api_v1_XXXXXX",
+  "name": "Acme Corporation",
+  "email": "admin@company.com",
+  "phone": "+1234567890",
+  "type": "MASTER",
+  "auth_id": "YOUR_AUTH_ID",
+  "auth_secret": "sk_live_XXXXXXXXXXXXXXXXXXXX",
+  "auth_token_expire_time": "2025-11-22T03:16:12Z",
+  "description": null,
+  "company": "Acme Corp LLC",
+  "address": "123 Tech Lane",
+  "city": "Innovation City",
+  "state": "California",
+  "zip_code": "90001",
+  "country": "US",
+  "timezone": "America/Los_Angeles",
+  "account_type": "PREPAID",
+  "postpaid": false,
+  "auto_recharge": true,
+  "enabled": true,
+  "is_active": true,
+  "is_verified": true,
+  "is_trial_account": false,
+  "role": "ADMIN",
+  "carrier_type": "VOIP",
+  "customer_type": "ENTERPRISE",
+  "credit_limit": "100.00",
+  "cps_limit": 10,
+  "concurrent_calls_limit": 50,
+  "base_cps_limit": 5,
+  "base_concurrent_calls_limit": 25,
+  "purchased_cps": 5,
+  "purchased_concurrent_calls": 25,
+  "risk_rating": "LOW",
+  "risk_status": "NORMAL",
+  "ip_auth_enabled": false,
+  "ip_whitelist_rules": [],
+  "allow_aws_ips": true,
+  "features": {
+    "call_queue": true,
+    "transcription_enabled": true
+  },
+  "pricing_tier_id": "1fa3db95-526a-4b5e-86a6-4bcd62ef31fa",
+  "pricing_tier": {
+    "id": "1fa3db95-526a-4b5e-86a6-4bcd62ef31fa",
+    "name": "baseTier",
+    "description": "Standard enterprise pricing plan",
+    "currency": "INR",
+    "rate_per_minute": "0.4500",
+    "billing_increment_seconds": 60,
+    "minimum_duration_seconds": 0,
+    "is_active": true,
+    "is_default": true
+  },
+  "created_at": "2025-10-17T08:51:00.552579Z",
+  "updated_at": "2025-10-22T03:16:11.815251Z",
+  "last_login": "2025-10-22T03:16:12.901344Z"
+}
+```
+
+<Note>
+  The `pricing_tier` object defines your per-minute billing rate and increment granularity. Contact support to change your pricing tier.
+</Note>

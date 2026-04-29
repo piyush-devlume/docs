@@ -1,0 +1,119 @@
+---
+title: "Frequently Asked Questions About Vobiz"
+description: "Answers to common questions on SIP trunking, concurrency, CPS limits, 429 errors, IVR, call transfer, SIP codes 480 and 486, billing, and more."
+sidebarTitle: "FAQ"
+---
+
+Quick answers to common questions about Vobiz — accounts, SIP trunking, integrations, billing, and system limits.
+
+## Account and billing
+
+<AccordionGroup>
+  <Accordion title="Can I connect my trial number for inbound calls?">
+    Trial accounts have inbound calling restrictions. You can purchase a DID number from the **DID** section of the console to receive inbound calls on a full account. Contact support if you need clarification on what trial accounts include in your region.
+  </Accordion>
+  <Accordion title="Can I purchase additional concurrency or CPS?">
+    Yes. Log in to the [Vobiz console](https://console.vobiz.ai) and navigate to **Account Settings → Billing** to purchase a higher concurrency (parallel call) limit or CPS (calls per second) limit. Both can be scaled up independently.
+  </Accordion>
+  <Accordion title="Do you provide 1400, 1600, and 92 series numbers?">
+    Availability of premium number series depends on your account type and region. Contact Vobiz support to inquire about specific number series availability for your use case.
+  </Accordion>
+</AccordionGroup>
+
+## API and limits
+
+<AccordionGroup>
+  <Accordion title="Why am I receiving a 429 error?">
+    A `429 Too Many Requests` response means your application has attempted to initiate more traffic than your current account provisioning allows. You have hit one of two limits:
+
+    **Concurrency limit** — The total number of simultaneous active calls on your account. If your limit is 10 and you attempt to dial an 11th call before any of the first 10 hang up, the request fails with 429.
+
+    **CPS limit** — The rate at which you launch new calls (Calls Per Second). Even if your concurrency is entirely free, exceeding your CPS limit in a single second causes the excess calls to be rejected with 429.
+
+    **To resolve 429 errors:**
+    - Check your current CPS and concurrency limits in **Account Settings** on the [dashboard](https://console.vobiz.ai)
+    - Implement pacing queues (RabbitMQ, Redis) to smooth the distribution of outbound API triggers
+    - Purchase a higher concurrency or CPS limit if you legitimately need more capacity
+  </Accordion>
+  <Accordion title="What is concurrency?">
+    Concurrency (also called Concurrent Calls or Channels) is the number of parallel active calls simultaneously in progress on your account at any given moment.
+
+    If your concurrency limit is 50, you can have 50 active calls happening at the same time — whether 50 outbound dials waiting to be answered, 50 live AI voice agent conversations, or any combination.
+
+    **When you exceed the limit**, the 51st call attempt — inbound or outbound — is rejected immediately with `429 Too Many Requests` or `SIP 503 Service Unavailable`.
+
+    **Calculating your requirements:** Multiply your target calls per hour by your average call duration. If you expect 100 calls per hour and each lasts 10 minutes (⅙ of an hour), you need 100 × (10/60) ≈ 17 concurrent channels. If each call lasts a full hour, you need 100.
+  </Accordion>
+  <Accordion title="What is CPS (Calls Per Second)?">
+    CPS is the rate at which you initiate new calls within a single second. A CPS limit of 5 means you can launch at most 5 new call requests per second, regardless of how much concurrency headroom you have available.
+
+    Exceeding your CPS limit causes the excess calls in that second to be rejected with `429`. Implement a rate-limiting queue to pace call initiation smoothly within your CPS limit.
+  </Accordion>
+  <Accordion title="Why am I receiving SIP response codes 480 or 486?">
+    Both codes indicate transient availability issues on the recipient's side — not a platform failure.
+
+    **486 — Busy Here:** The called party's device is actively engaged in another call and does not have call waiting enabled, or the user explicitly rejected your call by pressing the reject button. The SIP endpoint returned a `Busy Here` response.
+
+    **480 — Temporarily Unavailable:** The receiving device cannot be reached. Common causes:
+    - The user's mobile device is switched off or battery depleted
+    - The user is outside their carrier's cellular coverage area
+    - The device is in Airplane mode or Do Not Disturb (DND)
+    - The network operator experienced a routing timeout before the device could answer
+
+    **If you see repeated 480 or 486 against multiple distinct numbers on a specific carrier:** the carrier's spam filters may have temporarily blocked your caller ID. Pause dialing attempts for several hours or contact Vobiz support to investigate upstream carrier traces.
+  </Accordion>
+</AccordionGroup>
+
+## Features and integrations
+
+<AccordionGroup>
+  <Accordion title="What integrations does Vobiz support?">
+    Vobiz provides tested, documented integrations with the following AI voice and telephony platforms:
+
+    - **VAPI** — BYO SIP trunk with custom header injection
+    - **Retell AI** — Elastic SIP trunk or dynamic API registration
+    - **ElevenLabs** — Native SIP for conversational AI
+    - **LiveKit** — SIP Service with WebRTC room integration
+    - **Pipecat** — WebSocket audio streaming with VobizFrameSerializer
+    - **Bolna** — Managed voice AI via WebSocket or SIP
+    - **Ultravox** — Real-time AI voice via WebSocket; SIP via intermediary
+
+    See the [Integrations](/integrations) section for platform-specific setup guides.
+  </Accordion>
+  <Accordion title="Is call transfer supported?">
+    Yes. Call transfer is fully supported across all environments. There are three supported methods:
+
+    **1. The `<Dial>` XML tag** — The primary method for bridging a live caller to another party. Use the `<Dial>` noun in your Voice XML response to connect the caller to a new SIP URI or E.164 phone number (warm or cold transfer).
+
+    **2. REST API live transfer** — If a call is already in progress (e.g., executing a WebSocket stream to Retell AI) and you need to perform an out-of-band transfer dynamically (such as transferring to a human agent), use the REST API to update the call state and point it to a new destination XML endpoint via `/transfer-call`.
+
+    **3. SIP REFER (blind/attended SIP transfer)** — If you are connecting via SIP hardware (IP desk phone, PBX), Vobiz supports RFC 3515 `SIP REFER` messages. This allows your authenticated SIP endpoints to trigger blind or attended transfers at the network layer without additional code. Supported on verified SIP trunks only.
+  </Accordion>
+  <Accordion title="Do you support IVR?">
+    Yes. Interactive Voice Response (IVR) systems are fully supported via the Voice XML API. You have complete programmatic control by returning valid XML from your backend webhooks.
+
+    **Key Voice XML tags for IVR:**
+
+    - **`<Gather>`** — Collect DTMF digit input ("Press 1 for Sales") or natural speech input. Vobiz fires a webhook to your server with the digits pressed or transcribed speech.
+    - **`<Speak>`** — Use neural AI text-to-speech voices across multiple languages to dynamically synthesize prompts (e.g., reading back account balances from a database lookup).
+    - **`<Play>`** — Play pre-recorded studio prompts or hold music from a remote MP3 or WAV URL.
+    - **`<Dial>`** — Branch calls to external SIP URIs or E.164 numbers based on IVR navigation. Supports SIP REFER for network-level transfers.
+
+    Use the [XML Builder](https://www.docs.vobiz.ai/xml-builder) to generate Voice XML without writing it by hand.
+  </Accordion>
+</AccordionGroup>
+
+## Trust and support
+
+<AccordionGroup>
+  <Accordion title="What documents are required for account verification?">
+    Verification document requirements depend on your account type (individual vs. business) and your country. Contact Vobiz support for the specific documents required for your situation.
+  </Accordion>
+  <Accordion title="How can I contact support?">
+    Use the **Contact Support** link in the Vobiz console, or reach out via the channels listed in your account's support section. When reporting a technical issue, always include the `requestId` from the error response and, if relevant, the `CallUUID` from your SIP or voice call logs.
+  </Accordion>
+</AccordionGroup>
+
+## Still have questions?
+
+If your question is not covered above, contact the Vobiz support team through the [support portal](https://console.vobiz.ai). Include as much context as possible — error codes, request IDs, call UUIDs, and what you were attempting — to get a faster resolution.

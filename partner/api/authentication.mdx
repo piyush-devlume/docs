@@ -1,0 +1,156 @@
+---
+title: "Partner API Authentication and Credentials"
+sidebarTitle: "Authentication"
+description: "Partner API authentication: dual request headers, getting credentials, rotating tokens, and using JWT login for interactive management sessions."
+---
+
+Every request to the Partner API requires your partner credentials. Vobiz supports two authentication mechanisms: header-based authentication for production server-to-server integrations, and JWT login for short-lived interactive sessions. Use header-based authentication for all automation and production workloads.
+
+<Note>
+  Partner API access is not self-serve. You must contact [support@vobiz.ai](mailto:support@vobiz.ai) to enable partner access, receive your credentials, and complete onboarding. Typical response time is one business day.
+</Note>
+
+## Header-based authentication
+
+Include the following headers on every request. These credentials are permanent and do not expire unless you rotate them manually.
+
+<ParamField header="X-Auth-ID" type="string" required>
+  Your permanent Partner ID (e.g. `partner-882abc...`). Retrieved from the Partner Console under **Settings → API Keys**. This value never changes unless you request a new one.
+</ParamField>
+
+<ParamField header="X-Auth-Token" type="string" required>
+  Your secret API token (e.g. `sk_live_abc123...`). Rotate this immediately if you suspect it has been compromised.
+</ParamField>
+
+<ParamField header="Accept" type="string" required>
+  Must be `application/json` on all GET and POST requests.
+</ParamField>
+
+<ParamField header="Content-Type" type="string">
+  Must be `application/json` on all POST and PUT requests that include a request body.
+</ParamField>
+
+<CodeGroup>
+
+```bash GET request
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/me" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```bash POST request with body
+curl -X POST \
+  "https://api.vobiz.ai/api/v1/partner/accounts" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Acme Corp", "email": "admin@acme.com", "password": "Secure@123", "country": "IN"}'
+```
+
+</CodeGroup>
+
+## Partner login (JWT)
+
+Exchange your partner email and password for a temporary JWT access token. This is suitable for dashboard UIs or short-lived sessions. For automation, use header-based authentication instead.
+
+**`POST https://api.vobiz.ai/api/v1/partner/login`**
+
+### Request body
+
+<ParamField body="email" type="string" required>
+  Your partner account email address.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Your partner account password.
+</ParamField>
+
+### Response
+
+<ResponseField name="tokens" type="object">
+  <Expandable title="properties">
+    <ResponseField name="access_token" type="string">
+      The JWT access token. Include as a `Bearer` token in the `Authorization` header for subsequent requests during this session.
+    </ResponseField>
+    <ResponseField name="token_type" type="string">
+      Always `"Bearer"`.
+    </ResponseField>
+    <ResponseField name="expires_in" type="integer">
+      Token lifetime in seconds (e.g. `3600` for one hour).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  "https://api.vobiz.ai/api/v1/partner/login" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "partner@example.com",
+    "password": "YourPassword123!"
+  }'
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "https://api.vobiz.ai/api/v1/partner/login",
+    headers={
+        "X-Auth-ID": "{your_partner_id}",
+        "X-Auth-Token": "{your_auth_token}",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    },
+    json={
+        "email": "partner@example.com",
+        "password": "YourPassword123!",
+    },
+)
+
+tokens = response.json()["tokens"]
+print(tokens["access_token"])
+```
+
+</CodeGroup>
+
+**200 OK**
+
+```json
+{
+  "tokens": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "Bearer",
+    "expires_in": 3600
+  }
+}
+```
+
+**401 Unauthorized**
+
+```json
+{
+  "error": "invalid_credentials",
+  "message": "The email or password you provided is incorrect."
+}
+```
+
+## Security best practices
+
+<Warning>
+  Never expose your `X-Auth-Token` in client-side code, browser JavaScript, mobile app binaries, or version control. If compromised, rotate it immediately from the [Partner Console](https://console.vobiz.ai).
+</Warning>
+
+**Store credentials in environment variables.** Use a secrets manager (AWS Secrets Manager, HashiCorp Vault) or `.env` files excluded from version control. Never hardcode credentials in source files.
+
+**Rotate your token if compromised.** If your `X-Auth-Token` is leaked in a git commit, a chat message, or server logs, rotate it immediately from the Partner Console. The old token is invalidated instantly.
+
+**Audit your git history.** If you suspect credentials were ever committed, use tools like `git-secrets` or `truffleHog` to scan your repository history.

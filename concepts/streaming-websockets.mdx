@@ -1,0 +1,226 @@
+---
+title: "WebSocket Audio Streaming for AI Pipelines"
+description: "How Vobiz WebSocket streaming works: message types, G.711 µ-law encoding, the audio conversion pipeline, Pipecat architecture, and Python integration."
+sidebarTitle: "WebSocket streaming"
+---
+
+WebSocket audio streaming is the second major architecture for connecting phone calls to AI voice agents — and it is fundamentally different from SIP.
+
+Instead of routing calls through a SIP signaling layer to a managed platform like LiveKit, you instruct Vobiz to answer the call directly and stream the raw audio over a standard WebSocket connection straight to your server. Your server is the AI pipeline.
+
+This is the lowest-level, most direct integration path available. No third-party platform sits between Vobiz and your code. Every byte of audio is yours to process however you choose — which means maximum control, minimum cost, and full responsibility for everything that connects the pieces.
+
+<Note>
+  Voice XML streaming is not a replacement for SIP — it is a different integration layer entirely. SIP handles call routing and control at the telephony layer. WebSocket streaming handles audio delivery at the application layer. You can use both in the same architecture: SIP to route the call to Vobiz, then VoiceXML streaming to pipe audio to your Python server.
+</Note>
+
+## How WebSocket streaming works
+
+When an inbound call arrives at Vobiz, the platform fetches your webhook URL and expects a VoiceXML response containing a `<Stream>` directive. This tells Vobiz to open a WebSocket connection to your server and begin forwarding audio.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Speak voice="WOMAN" language="en-US">
+    Welcome to Vobiz.
+  </Speak>
+  <Stream>
+    wss://yourapp.com/ws
+  </Stream>
+</Response>
+```
+
+Once Vobiz receives this directive it establishes a WebSocket connection to your server and begins forwarding the caller's audio in real time. Any audio your server sends back over the same WebSocket is played to the caller. The connection is bidirectional and persistent for the entire call duration.
+
+### End-to-end audio pipeline
+
+```
+PSTN caller dials your Vobiz DID number
+  └─ Vobiz fetches your webhook URL → receives VoiceXML <Stream> directive
+
+Vobiz opens WebSocket to wss://your-server.com/ws
+  └─ Sends "connected" + "start" JSON messages with call metadata
+  └─ Streams raw audio as "media" messages (base64 µ-law, 20 ms chunks)
+
+Your server (AI pipeline)
+  └─ Receives audio → STT → LLM → TTS → sends audio back via WebSocket
+  └─ Vobiz plays returned audio to the caller in real time
+
+PSTN caller hears your AI agent's voice response
+```
+
+## WebSocket message types
+
+All messages over the WebSocket connection are JSON. Your server receives five event types and sends back one:
+
+<AccordionGroup>
+  <Accordion title="connected (receive)">
+    Sent immediately when the WebSocket connection is established. Contains the WebSocket protocol version. No call-specific data yet.
+  </Accordion>
+  <Accordion title="start (receive)">
+    Sent once when the audio stream begins. Contains the `StreamSid` (unique stream identifier), `CallSid`, and any custom parameters you configured on the Stream directive. Initialize your per-call state here.
+  </Accordion>
+  <Accordion title="media (receive + send)">
+    The audio data itself. Received continuously while the caller is speaking. Contains a base64-encoded payload of G.711 µ-law audio at 8 kHz. To send audio back to the caller, send the same format with the `StreamSid`.
+  </Accordion>
+  <Accordion title="dtmf (receive)">
+    Sent when the caller presses a phone key (0–9, *, #). Contains the digit pressed. DTMF tones are detected by Vobiz and delivered as discrete events — they do **not** appear in the audio stream. Handle DTMF separately from your audio pipeline.
+  </Accordion>
+  <Accordion title="stop (receive)">
+    Sent when the call ends — caller hangs up or the call is terminated programmatically. After this event the WebSocket connection closes. Clean up all per-call resources here to avoid memory leaks.
+  </Accordion>
+</AccordionGroup>
+
+## G.711 µ-law encoding
+
+Every audio payload arriving from Vobiz — and every payload you send back — is encoded as **G.711 µ-law (PCMU)**. This is the standard audio encoding of the global telephone network.
+
+| Property | Value | Notes |
+|---|---|---|
+| Sample rate | 8,000 Hz | Narrow band. Human voice 300–3400 Hz. Sufficient for intelligibility. |
+| Bit depth | 8 bits/sample | After companding. Equivalent to ~12 bits linear PCM in perceived dynamic range. |
+| Bitrate | 64 kbps | 8,000 samples/sec × 8 bits. Delivered in 20 ms frames = 160 bytes per packet. |
+
+The µ (mu) in µ-law refers to a logarithmic companding function that applies non-linear compression to the audio signal before encoding. It is not standard PCM — you cannot feed µ-law bytes directly to a speech recognition model.
+
+### The audio conversion pipeline
+
+Every WebSocket voice AI implementation requires this conversion chain on both the inbound and outbound paths:
+
+<Tabs>
+  <Tab title="Inbound (caller → AI pipeline)">
+    1. **Receive JSON** — `media` event with base64 payload
+    2. **Base64 decode** — string → bytes (µ-law)
+    3. **Decode µ-law** — 8-bit µ-law → 16-bit PCM at 8 kHz
+    4. **Resample** — 8 kHz → 16 kHz or 24 kHz PCM
+    5. **Feed STT** — stream to your speech recognition engine
+  </Tab>
+  <Tab title="Outbound (AI response → caller)">
+    1. **Generate audio** — TTS engine returns 16 kHz or 24 kHz PCM
+    2. **Resample** — 16 kHz/24 kHz → 8 kHz PCM
+    3. **Encode µ-law** — 16-bit 8 kHz PCM → 8-bit µ-law
+    4. **Base64 encode** — µ-law bytes → base64 string
+    5. **Send JSON** — transmit `{"event":"media"}` over the WebSocket
+  </Tab>
+</Tabs>
+
+<Tip>
+  Python's built-in `audioop` module handles µ-law conversion and resampling natively. Use `audioop.ulaw2lin()` for decoding and `audioop.ratecv()` for sample rate conversion. Pipecat's serializers execute this full chain automatically.
+</Tip>
+
+## Advantages of WebSocket streaming
+
+**No third-party platform cost.** There is no LiveKit, VAPI, or Retell layer. You pay Vobiz for the channel and your raw AI API costs (STT, LLM, TTS). At scale this is a significant cost difference.
+
+**Direct AI model integration.** Deepgram, OpenAI, Anthropic, and Cartesia all natively consume or produce WebSocket audio streams. Your Vobiz stream connects almost directly without large SDK abstractions.
+
+**Full pipeline control.** Every byte of audio flows through your code. Implement custom VAD logic, custom barge-in states, and bespoke routing trees directly.
+
+**Easiest to debug locally.** A WebSocket server is just a web server. Test locally with ngrok and inspect messages in browser DevTools.
+
+**Familiar technology stack.** WebSockets are standard web technologies. Any Python, Node.js, or Go developer handles them without mastering legacy SIP headers and RTP concepts.
+
+**No IP allowlisting required.** Authentication happens at the connection level via URL parameters or headers — much simpler than IP-based ACLs that break when providers rotate egress IPs.
+
+## Disadvantages of WebSocket streaming
+
+**One stateful connection per call.** 100 concurrent calls means 100 open sockets each maintaining context buffers. Crashing mid-call destroys that call's state.
+
+**Barge-in requires implementation.** Getting AI interruptions right requires orchestrating VAD thresholds, aborting in-flight TTS playback, flushing buffers, and resetting logic.
+
+**Turn detection is hard.** Separating sentence pauses from true turn handovers requires locally running VAD models (Silero VAD) to avoid false-positive interruptions.
+
+**Conversion chain complexity.** The µ-law → PCM → AI cycle is unforgiving about byte matching. Wrong endianness or sample rate mismatches produce severely distorted audio with no clear error messages.
+
+**TCP vs. UDP.** WebSockets use reliable TCP. If an audio packet stalls, TCP retransmission holds up all subsequent packets, injecting jitter where UDP would simply skip the lost packet.
+
+**No enterprise PBX out of the box.** Corporate PBX systems (Avaya, Teams) do not speak WebSocket streams. If PBX integration is required, you need SIP trunking.
+
+## Pipecat integration
+
+**Pipecat** (open-source, from Daily.co) is the leading Python framework for building WebSocket-based voice pipelines. It shields you from audio conversion, pipeline orchestration, VAD, and barge-in logistics.
+
+### Pipeline architecture
+
+Pipecat models a voice call as a linear chain of processors. Each processor receives frames (audio, text, control markers) and passes outputs downstream:
+
+```
+transport.input()
+  ↓ AudioRawFrame (µ-law from Vobiz)
+stt   # e.g. DeepgramSTTService
+  ↓ TranscriptionFrame (text)
+llm   # e.g. OpenAILLMService
+  ↓ TextFrame (response tokens)
+tts   # e.g. ElevenLabsTTSService
+  ↓ AudioRawFrame (PCM)
+transport.output()
+```
+
+### VobizFrameSerializer
+
+The `VobizFrameSerializer` handles all base64 decoding, µ-law ↔ PCM conversion, and Vobiz-specific JSON message framing automatically. Your pipeline receives clean audio frames with no manual conversion code.
+
+### Built-in VAD
+
+Pipecat integrates Silero VAD locally out of the box. It intercepts false positives and initiates TTS cancellation, yielding seamless conversational cadence.
+
+<Warning>
+  Pipecat's `WebSocketServerTransport` binds to **one active connection per process**. High concurrency requires distinct Pipecat worker processes — one per concurrent call — deployed in separate containers or worker pools. Do not attempt to serve two simultaneous calls from one Pipecat process.
+</Warning>
+
+[Read the Pipecat integration guide →](/integrations/pipecat)
+
+## Direct Python integration
+
+If you need maximum control without a framework, you can own the full WebSocket server and audio conversion stack yourself using bare-metal asyncio.
+
+**Use direct Python when:**
+
+- You are building experimental multimodal pipelines unsupported by existing serializers
+- You are merging WebSocket endpoints into an existing FastAPI monolith
+- You need millisecond-precision audio injection, such as IVR branching prompts
+
+**Responsibilities you take on:**
+
+- Asyncio multiplexer state management
+- µ-law ↔ PCM byte math
+- Latency compensation and buffer management
+- In-flight TTS pausing and buffer flushing on barge-in
+- DTMF intercept flag handling
+
+## Common implementation pitfalls
+
+<AccordionGroup>
+  <Accordion title="Oversending audio">
+    Delivering large processed TTS streams in one shot into a 20 ms socket causes packet backpressure and rejection. Chunk audio into 20 ms frames and send them at the correct cadence.
+  </Accordion>
+  <Accordion title="Little-endian byte order">
+    Python produces little-endian audio by default. If a specific STT or TTS endpoint requires big-endian output, you will get confusing static noise. Check the byte order requirement of every AI API you connect.
+  </Accordion>
+  <Accordion title="Memory leaks on disconnect">
+    Failing to destroy async STT generators on WebSocket close events causes memory to grow unbounded over time. Always clean up per-call resources in your `stop` event handler.
+  </Accordion>
+  <Accordion title="Concurrent writes to one socket">
+    Two parallel coroutines writing to the same WebSocket simultaneously cause fatal write collision errors. Use a single async writer with a queue — never write from multiple coroutines concurrently.
+  </Accordion>
+  <Accordion title="VAD false positives on ambient noise">
+    Loud ambient environments (TVs, sirens) continuously trigger VAD and cancel outgoing responses. Tune VAD thresholds for your target noise floor, or use Silero VAD's probability threshold rather than raw amplitude.
+  </Accordion>
+  <Accordion title="DTMF in the audio stream">
+    Injecting raw DTMF tone frequencies into the audio stream corrupts STT transcription. Use discrete DTMF events — never embed button tones in the audio payload.
+  </Accordion>
+</AccordionGroup>
+
+## When to choose WebSocket streaming
+
+Choose WebSocket streaming when any of the following apply:
+
+- You are building with Pipecat, direct Python, or Node.js
+- You are running more than 50,000 calls per month and want to eliminate platform markup
+- You want full ownership of the audio pipeline (custom VAD, custom STT models, bespoke routing)
+- Your team is Python or Node.js native and you want to avoid SIP expertise requirements
+- You need rapid prototyping — a single Python file with FastAPI and ngrok is a working voice bot
+
+<Tip>
+  If you need live call transfer, enterprise PBX integration, or want to use LiveKit, VAPI, or Retell AI, see [SIP trunking](/concepts/sip-trunking) for the alternative architecture.
+</Tip>

@@ -1,0 +1,158 @@
+---
+title: "Update a Trunk — Modify SIP Trunk Configuration"
+description: "Update an existing Vobiz SIP trunk's name, description, or enabled status. Only include the fields you want to change; all others remain unchanged."
+sidebarTitle: "Update a trunk"
+---
+
+Use this endpoint to modify an existing trunk's configuration. Send only the fields you want to change — all other fields retain their current values. The `trunk_id` and `auth_id` are immutable and cannot be changed after creation.
+
+<Note>
+To temporarily take a trunk out of service without losing its configuration, set `enabled` to `false` rather than deleting it.
+</Note>
+
+## Request
+
+```
+PUT https://api.vobiz.ai/api/v1/account/{auth_id}/trunks/{trunk_id}
+```
+
+**Headers**
+
+| Header | Value |
+|--------|-------|
+| `X-Auth-ID` | Your account Auth ID |
+| `X-Auth-Token` | Your account Auth Token |
+| `Content-Type` | `application/json` |
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account identifier.
+</ParamField>
+
+<ParamField path="trunk_id" type="string" required>
+  The UUID of the trunk to update.
+</ParamField>
+
+## Body parameters
+
+All body parameters are optional. Include only the fields you want to update.
+
+<ParamField body="name" type="string">
+  Updated trunk name. Maximum 255 characters.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Updated description for the trunk.
+</ParamField>
+
+<ParamField body="enabled" type="boolean">
+  Set to `false` to disable the trunk without deleting it. Set to `true` to re-enable.
+</ParamField>
+
+## Response
+
+Returns the complete updated trunk object with a refreshed `updated_at` timestamp.
+
+<ResponseField name="trunk_id" type="string (UUID)">
+  Trunk identifier (unchanged).
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Updated trunk name.
+</ResponseField>
+
+<ResponseField name="enabled" type="boolean">
+  Updated enabled status.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string (ISO 8601)">
+  UTC timestamp of this update.
+</ResponseField>
+
+## Examples
+
+<CodeGroup>
+
+```bash cURL — update name
+curl -X PUT \
+  https://api.vobiz.ai/api/v1/account/{Auth_ID}/trunks/bfab10fb-cb97-488b-9c63-989c32980b0f \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Updated Production Trunk"}'
+```
+
+```bash cURL — disable trunk
+curl -X PUT \
+  https://api.vobiz.ai/api/v1/account/{Auth_ID}/trunks/bfab10fb-cb97-488b-9c63-989c32980b0f \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false}'
+```
+
+```python Python
+import requests
+
+trunk_id = "bfab10fb-cb97-488b-9c63-989c32980b0f"
+url = f"https://api.vobiz.ai/api/v1/account/{{Auth_ID}}/trunks/{trunk_id}"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+payload = {
+    "name": "Updated Production Trunk",
+    "description": "Renamed after regional migration"
+}
+
+response = requests.put(url, json=payload, headers=headers)
+trunk = response.json()
+print(trunk["updated_at"])
+```
+
+```javascript Node.js
+const trunkId = "bfab10fb-cb97-488b-9c63-989c32980b0f";
+const response = await fetch(
+  `https://api.vobiz.ai/api/v1/account/{Auth_ID}/trunks/${trunkId}`,
+  {
+    method: "PUT",
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ enabled: false })
+  }
+);
+
+const trunk = await response.json();
+console.log(trunk.enabled, trunk.updated_at);
+```
+
+</CodeGroup>
+
+**Example response (200 OK)**
+
+```json
+{
+  "trunk_id": "bfab10fb-cb97-488b-9c63-989c32980b0f",
+  "auth_id": "MA_XYZ123",
+  "name": "Updated Production Trunk",
+  "trunk_domain": "bfab10fb.sip.vobiz.ai",
+  "trunk_status": "active",
+  "secure": false,
+  "trunk_direction": "both",
+  "concurrent_calls_limit": 10,
+  "cps_limit": 5,
+  "description": "Updated description for production trunk",
+  "transport": "udp",
+  "created_at": "2025-11-03T14:09:12.08032875Z",
+  "updated_at": "2025-11-03T14:10:15.12345678Z"
+}
+```
+
+<Tip>
+Disable a trunk instead of deleting it when you need to pause service temporarily. Disabled trunks preserve all credentials, IP ACLs, and origination URI configurations.
+</Tip>

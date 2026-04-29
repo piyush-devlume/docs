@@ -1,0 +1,164 @@
+---
+title: "Start an Audio Stream on a Live Call"
+sidebarTitle: "Start an audio stream"
+description: "Stream audio from an active call to your WebSocket server. Configure the track, codec, sample rate, bidirectional mode, and status callbacks."
+---
+
+Use this endpoint to start a new audio stream on a call that is currently in progress. Vobiz opens a WebSocket connection to the URL you provide and begins forwarding audio frames in near real time. You can start multiple concurrent streams on the same call — each returns its own `stream_id`.
+
+<Warning>
+  The target WebSocket URL must be reachable from Vobiz servers and must accept connections over `wss://` in production. Using `ws://` is only suitable for local development.
+</Warning>
+
+## Endpoint
+
+```
+POST https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Stream/
+```
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account authentication ID.
+</ParamField>
+
+<ParamField path="call_uuid" type="string" required>
+  UUID of the active call to attach the stream to. The call must be in progress.
+</ParamField>
+
+## Request parameters
+
+<ParamField body="service_url" type="string" required>
+  WebSocket URL (`wss://` or `ws://`) to which Vobiz forwards the call audio. Must be reachable from the public internet.
+</ParamField>
+
+<ParamField body="audio_track" type="string" default="inbound">
+  Track of the call to fork to the WebSocket. One of `inbound`, `outbound`, or `both`. When `bidirectional` is `true`, only `inbound` is supported.
+</ParamField>
+
+<ParamField body="bidirectional" type="boolean" default="false">
+  If `true`, your WebSocket server may send audio back into the call using `playAudio` events. Requires `audio_track` to be `inbound`.
+</ParamField>
+
+<ParamField body="content_type" type="string" default="audio/x-l16;rate=8000">
+  Audio encoding format. Options: `audio/x-l16;rate=8000`, `audio/x-l16;rate=16000`, `audio/x-l16;rate=24000`, or `audio/x-mulaw;rate=8000`.
+</ParamField>
+
+<ParamField body="stream_timeout" type="integer" default="86400">
+  Maximum stream duration in seconds. Vobiz stops the stream automatically when this limit is reached. Default is `86400` (24 hours).
+</ParamField>
+
+<ParamField body="status_callback_url" type="string">
+  URL Vobiz calls when the stream status changes. Events: `connected`, `stopped`, `timeout`, `failed`.
+</ParamField>
+
+<ParamField body="status_callback_method" type="string" default="POST">
+  HTTP method for `status_callback_url`. One of `GET` or `POST`.
+</ParamField>
+
+<ParamField body="extra_headers" type="string">
+  Comma-separated list of additional HTTP headers (`header:value`) to send when opening the WebSocket connection. Use this to pass authentication tokens to your server.
+</ParamField>
+
+<Tip>
+  Use `audio/x-mulaw` at `8000` Hz for maximum compatibility with telephony carriers and the lowest bandwidth usage.
+</Tip>
+
+## Status callback events
+
+When the stream changes state, Vobiz sends an HTTP request to your `status_callback_url`. The `event` field in the callback body identifies what happened:
+
+| Event | Description |
+|---|---|
+| `Stream connected` | Audio streaming has started and frames are being forwarded to your WebSocket. |
+| `Stream stopped` | Streaming was stopped intentionally via the API or XML. |
+| `Stream timeout` | The configured `stream_timeout` duration was reached. |
+| `Stream failed` | The WebSocket connection failed or was dropped unexpectedly. |
+
+## Bidirectional streaming
+
+When `bidirectional=true`, send audio back into the call by pushing a JSON message over the WebSocket:
+
+```json
+{
+  "event": "playAudio",
+  "media": {
+    "contentType": "audio/x-l16",
+    "sampleRate": "8000",
+    "payload": "<base64-encoded-audio>"
+  }
+}
+```
+
+| Field | Accepted values |
+|---|---|
+| `contentType` | `audio/x-l16`, `audio/x-mulaw` |
+| `sampleRate` | `8000`, `16000` |
+| `payload` | Base64-encoded raw audio bytes |
+
+## Response
+
+A successful request returns HTTP `202 Accepted` with the generated `stream_id`:
+
+<ResponseField name="message" type="string">
+  Confirmation message. Value: `"audio streaming started"`.
+</ResponseField>
+
+<ResponseField name="stream_id" type="string">
+  Unique identifier for the newly created stream. Store this to retrieve or stop the stream later.
+</ResponseField>
+
+```json
+{
+  "message": "audio streaming started",
+  "stream_id": "728e273b-9c2c-4902-8509-2f88224cd3d5"
+}
+```
+
+## Code examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST 'https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Stream/' \
+  -H 'X-Auth-ID: {auth_id}' \
+  -H 'X-Auth-Token: {auth_token}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "service_url": "wss://your-server.com/ws",
+    "bidirectional": true,
+    "audio_track": "inbound",
+    "content_type": "audio/x-l16;rate=16000",
+    "status_callback_url": "https://your-server.com/stream-status"
+  }'
+```
+
+```python Python
+import requests
+
+AUTH_ID = "{auth_id}"
+AUTH_TOKEN = "{auth_token}"
+CALL_UUID = "{call_uuid}"
+
+url = f"https://api.vobiz.ai/api/v1/Account/{AUTH_ID}/Call/{CALL_UUID}/Stream/"
+
+headers = {
+    "X-Auth-ID": AUTH_ID,
+    "X-Auth-Token": AUTH_TOKEN,
+    "Content-Type": "application/json",
+}
+
+payload = {
+    "service_url": "wss://your-server.com/ws",
+    "bidirectional": True,
+    "audio_track": "inbound",
+    "content_type": "audio/x-l16;rate=16000",
+    "status_callback_url": "https://your-server.com/stream-status",
+}
+
+response = requests.post(url, headers=headers, json=payload)
+print(response.json())
+# {"message": "audio streaming started", "stream_id": "728e273b-..."}
+```
+
+</CodeGroup>

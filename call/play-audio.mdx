@@ -1,0 +1,195 @@
+---
+title: "Play Audio Files on Active Calls"
+description: "Play MP3 or WAV audio on a live call. Choose which leg hears the audio, loop files for hold music, and stop or replace playback at any time."
+---
+
+Use the play audio endpoint to stream audio files to participants in an ongoing call. This is commonly used for hold music, IVR prompts, pre-recorded announcements, or legal disclaimers. You can target specific call legs, loop audio indefinitely, and stop playback programmatically at any time.
+
+```
+POST https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Play/
+```
+
+**Supported formats:** `.mp3` and `.wav`. Audio files must be accessible over HTTP or HTTPS.
+
+## Start audio playback
+
+### Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account Auth ID.
+</ParamField>
+
+<ParamField path="call_uuid" type="string" required>
+  Unique identifier of the active call.
+</ParamField>
+
+### Request parameters
+
+<ParamField body="urls" type="string" required>
+  URL or comma-separated list of URLs pointing to audio files to play in sequence. Example: `https://example.com/hold.mp3,https://example.com/message.mp3`.
+</ParamField>
+
+<ParamField body="length" type="integer">
+  Maximum playback duration in seconds. Playback stops after this duration even if the audio file is longer. Omit to play the full file.
+</ParamField>
+
+<ParamField body="legs" type="string" default="aleg">
+  Which call participant(s) hear the audio. Accepted values:
+
+  - `aleg` — Play to the caller only.
+  - `bleg` — Play to the callee only.
+  - `both` — Play to both participants.
+</ParamField>
+
+<ParamField body="loop" type="boolean" default="false">
+  When `true`, repeats the audio continuously until playback is stopped. Useful for hold music.
+</ParamField>
+
+<ParamField body="mix" type="boolean" default="true">
+  When `true`, mixes the audio with the live call audio so both participants can speak while the audio plays. Set to `false` for announcements that should play without interference from call audio.
+</ParamField>
+
+## Stop audio playback
+
+```
+DELETE https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Play/
+```
+
+Send a `DELETE` request to stop any audio currently playing on the call.
+
+## Code examples
+
+<Tabs>
+  <Tab title="Play audio">
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X POST \
+      https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Play/ \
+      -H "X-Auth-ID: YOUR_AUTH_ID" \
+      -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "urls": "https://example.com/hold-music.mp3",
+        "legs": "aleg",
+        "loop": true,
+        "mix": true
+      }'
+    ```
+
+    ```python Python
+    import requests
+
+    auth_id = "YOUR_AUTH_ID"
+    call_uuid = "ACTIVE_CALL_UUID"
+
+    url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Play/"
+    headers = {
+        "X-Auth-ID": auth_id,
+        "X-Auth-Token": "YOUR_AUTH_TOKEN",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "urls": "https://example.com/hold-music.mp3",
+        "legs": "aleg",
+        "loop": True,
+        "mix": True
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    print(response.json())
+    ```
+
+    ```javascript Node.js
+    const axios = require("axios");
+
+    const authId = "YOUR_AUTH_ID";
+    const callUuid = "ACTIVE_CALL_UUID";
+
+    const response = await axios.post(
+      `https://api.vobiz.ai/api/v1/Account/${authId}/Call/${callUuid}/Play/`,
+      {
+        urls: "https://example.com/hold-music.mp3",
+        legs: "aleg",
+        loop: true,
+        mix: true
+      },
+      {
+        headers: {
+          "X-Auth-ID": authId,
+          "X-Auth-Token": "YOUR_AUTH_TOKEN",
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    console.log(response.data);
+    ```
+
+    </CodeGroup>
+  </Tab>
+  <Tab title="Stop audio">
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X DELETE \
+      https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Play/ \
+      -H "X-Auth-ID: YOUR_AUTH_ID" \
+      -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+    ```
+
+    ```python Python
+    import requests
+
+    auth_id = "YOUR_AUTH_ID"
+    call_uuid = "ACTIVE_CALL_UUID"
+
+    url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Call/{call_uuid}/Play/"
+    headers = {
+        "X-Auth-ID": auth_id,
+        "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    }
+
+    response = requests.delete(url, headers=headers)
+    print(response.status_code)
+    ```
+
+    ```javascript Node.js
+    const axios = require("axios");
+
+    const authId = "YOUR_AUTH_ID";
+    const callUuid = "ACTIVE_CALL_UUID";
+
+    await axios.delete(
+      `https://api.vobiz.ai/api/v1/Account/${authId}/Call/${callUuid}/Play/`,
+      {
+        headers: {
+          "X-Auth-ID": authId,
+          "X-Auth-Token": "YOUR_AUTH_TOKEN"
+        }
+      }
+    );
+
+    console.log("Audio playback stopped.");
+    ```
+
+    </CodeGroup>
+  </Tab>
+</Tabs>
+
+## Best practices
+
+<AccordionGroup>
+  <Accordion title="Use MP3 for efficiency">
+    MP3 files stream faster and use less bandwidth than WAV. Convert your audio to MP3 for better performance unless you need uncompressed audio.
+  </Accordion>
+  <Accordion title="Host audio on a CDN">
+    Host audio files on a CDN or reliable HTTPS-enabled service to ensure fast, consistent delivery during calls.
+  </Accordion>
+  <Accordion title="Set mix=false for important announcements">
+    Disable audio mixing when playing critical announcements to ensure participants hear them clearly without call audio interference.
+  </Accordion>
+  <Accordion title="Test on real calls">
+    Always test your audio files on actual calls to verify volume, clarity, and compatibility across different devices and networks.
+  </Accordion>
+</AccordionGroup>

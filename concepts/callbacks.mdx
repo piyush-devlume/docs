@@ -1,0 +1,164 @@
+---
+title: "Callbacks and Webhooks: Real-Time Event Notifications"
+description: "How Vobiz callbacks work: event types, URL configuration, HMAC signature verification, retry behavior, and best practices for webhook handlers."
+sidebarTitle: "Callbacks"
+---
+
+Callbacks (also called webhooks) are HTTP POST requests that Vobiz sends to your server when events occur in your account. They are how your application learns about call state changes, recording completions, and conference transitions without polling the API.
+
+When an event fires — a call ending, a recording processing, a conference starting — Vobiz immediately sends a `POST` request to the callback URL you configured for that resource. Your server processes the payload and responds with HTTP 200 to acknowledge receipt.
+
+## How callbacks work
+
+<Steps>
+  <Step title="Configure a callback URL">
+    Provide a callback URL when creating a resource — an application, SIP trunk, or individual call. The URL must be publicly accessible and use HTTPS.
+  </Step>
+  <Step title="An event occurs">
+    An event happens in your account: a call ends, a recording finishes processing, a conference starts or ends.
+  </Step>
+  <Step title="Vobiz sends an HTTP POST">
+    Vobiz sends a `POST` request to your callback URL with the event payload as `application/x-www-form-urlencoded` form data.
+  </Step>
+  <Step title="Your server responds">
+    Your server processes the callback and returns HTTP 200. If Vobiz does not receive a 200 within 3 seconds, it retries.
+  </Step>
+</Steps>
+
+### Example callback request
+
+When a call ends, Vobiz sends a POST to your configured callback URL:
+
+```http
+POST /webhooks/call-status HTTP/1.1
+Host: your-domain.com
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Vobiz-Webhook/1.0
+
+{
+  "Event": "Hangup",
+  "CallUUID": "550e8400-e29b-41d4-a716-446655440000",
+  "From": "+14155551234",
+  "To": "+14155555678",
+  "Status": "completed",
+  "Duration": 125,
+  "StartTime": "2025-10-30T10:30:00Z",
+  "EndTime": "2025-10-30T10:32:05Z",
+  "Direction": "outbound",
+  "auth_id": "{Auth_ID}"
+}
+```
+
+### Example server response
+
+Return HTTP 200 to acknowledge the callback:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "status": "received"
+}
+```
+
+## Callback events
+
+| Event type | Description | When it is sent |
+|---|---|---|
+| `Ring` | Call is ringing | When an outbound call starts ringing (via `/answer`) |
+| `StartApp` | Call was answered | When the called party answers (via `/answer`) |
+| `Hangup` | Call has ended | When the call completes (via `/answer`) |
+| `recording.completed` | Recording is ready | When a recording finishes processing |
+| `conference.started` | Conference has started | When the first participant joins |
+| `conference.ended` | Conference has ended | When the last participant leaves |
+
+## Callback parameters
+
+All callback requests include these standard parameters:
+
+| Parameter | Type | Description |
+|---|---|---|
+| `Event` | string | Event type identifier (e.g., `Ring`, `StartApp`, `Hangup`) |
+| `timestamp` | string | ISO 8601 timestamp of when the event occurred |
+| `auth_id` | string | Your Vobiz account identifier |
+| `CallUUID` | string | Unique identifier for the call |
+
+## Callback configuration hierarchy
+
+Callbacks are resolved from most specific to least specific. A more specific configuration always overrides a broader one:
+
+1. **Per-call callback** — `status_url` parameter in the Make Call API
+2. **Application callback** — `callback_url` in the Application object
+3. **Trunk callback** — `status_callback` in the Trunk configuration
+4. **Account default** — `default_callback_url` in Account settings
+
+## Security
+
+### Always use HTTPS
+
+<Warning>
+  Only configure HTTPS URLs as callback endpoints. Vobiz does not send callbacks to plain HTTP URLs.
+</Warning>
+
+### Verify the callback signature
+
+Vobiz signs every callback with an HMAC-SHA256 signature. Verify the signature on your server before processing the payload:
+
+```javascript
+const crypto = require('crypto');
+
+function verifyCallback(request, secret) {
+  const signature = request.headers['x-vobiz-signature'];
+  const timestamp = request.headers['x-vobiz-timestamp'];
+  const body = JSON.stringify(request.body);
+
+  // Reject callbacks older than 5 minutes
+  const now = Date.now();
+  if (Math.abs(now - timestamp) > 5 * 60 * 1000) {
+    return false;
+  }
+
+  // Compute expected signature
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(timestamp + '.' + body)
+    .digest('hex');
+
+  return signature === expectedSignature;
+}
+```
+
+### Implement replay protection
+
+Store processed callback IDs to prevent replay attacks:
+
+- Check whether the callback ID has been processed before
+- Store callback IDs in a cache or database for 24 hours
+- Reject duplicate callbacks with the same ID
+
+## Retry behavior
+
+Vobiz retries failed callbacks (any non-200 response) up to **3 times** with exponential backoff between attempts. Make your callback handler idempotent — it must be safe to receive and process the same event more than once.
+
+## Best practices
+
+**Respond quickly.** Return HTTP 200 within 3 seconds. If processing takes longer, queue the callback for async processing and respond immediately.
+
+**Make handlers idempotent.** Vobiz may deliver the same event more than once. Use the `CallUUID` as a deduplication key.
+
+**Log everything.** Log all incoming callbacks with the full payload, timestamp, event type, and processing result. Good logs are essential for debugging delivery issues.
+
+**Monitor callback health.** Track success and failure rates, response times, and set up alerts for consecutive failures. Missing callbacks can indicate your endpoint is down or unreachable.
+
+**Use separate endpoints per event type.** Routing callbacks to different URLs by event type (calls, recordings, conferences) simplifies your processing logic and makes failures easier to isolate.
+
+**Test locally with ngrok.** Use ngrok to expose your local development server to Vobiz callbacks during development. Copy the HTTPS URL ngrok generates and set it as your callback URL.
+
+```bash
+# Install ngrok and start a tunnel to your local server
+ngrok http 3000
+
+# Use the HTTPS URL as your callback URL
+# Example: https://abc123.ngrok.io/webhooks/vobiz
+```

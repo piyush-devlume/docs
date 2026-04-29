@@ -1,0 +1,239 @@
+---
+title: "Partner API: Transaction Ledgers and Financial Audit"
+sidebarTitle: "Transactions"
+description: "Access per-customer and global transaction ledgers for billing reconciliation, invoice generation, and financial audit across your partner accounts."
+---
+
+The Transactions API gives you a full financial audit trail for every credit and debit event across your partner ecosystem. Use it for monthly billing reconciliation, customer-facing statements, dispute resolution, and auditing balance movements between your account and your customers.
+
+Two endpoints cover different scopes:
+
+| Endpoint | Scope | Best for |
+|---|---|---|
+| `GET /accounts/{id}/transactions` | Single customer | Per-customer invoicing, customer statements |
+| `GET /transactions` | All customers | Platform-wide financial close, global reconciliation |
+
+---
+
+## Customer transactions
+
+**`GET https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/transactions`**
+
+Returns a paginated transaction ledger for one specific customer. Filter by transaction type and date range to generate statements for a specific billing period.
+
+### Path parameters
+
+<ParamField path="customer_auth_id" type="string" required>
+  The `auth_id` of the customer whose transactions you want to retrieve.
+</ParamField>
+
+### Query parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number.
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="20">
+  Records per page. Maximum: `100`.
+</ParamField>
+
+<ParamField query="transaction_type" type="string">
+  Filter by type: `recharge`, `debit`, `adjustment`, or `refund`. Omit to return all types.
+</ParamField>
+
+<ParamField query="from_date" type="string">
+  Start date filter. Format: `YYYY-MM-DD`.
+</ParamField>
+
+<ParamField query="to_date" type="string">
+  End date filter. Format: `YYYY-MM-DD`.
+</ParamField>
+
+<CodeGroup>
+
+```bash All transactions
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/transactions?page=1&per_page=20" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```bash Billing cycle — March 2026
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/transactions?from_date=2026-03-01&to_date=2026-03-31&per_page=100" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```bash Recharges only
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/transactions?transaction_type=recharge&per_page=50" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```python Python
+import requests
+
+BASE = "https://api.vobiz.ai/api/v1/partner"
+HEADERS = {
+    "X-Auth-ID": "{your_partner_id}",
+    "X-Auth-Token": "{your_auth_token}",
+    "Accept": "application/json",
+}
+
+customer_auth_id = "MA_48149cf4"
+
+response = requests.get(
+    f"{BASE}/accounts/{customer_auth_id}/transactions",
+    headers=HEADERS,
+    params={
+        "transaction_type": "debit",
+        "from_date": "2026-03-01",
+        "to_date": "2026-03-31",
+        "per_page": 100,
+    },
+)
+
+data = response.json()
+total_debits = sum(abs(t["amount"]) for t in data["data"])
+print(f"Total usage cost for March: {total_debits}")
+```
+
+</CodeGroup>
+
+```json
+{
+  "data": [
+    {
+      "id": "txn_abc123",
+      "type": "recharge",
+      "amount": 500.00,
+      "currency": "INR",
+      "balance_before": 1950.00,
+      "balance_after": 2450.00,
+      "description": "April recharge — Credresolve",
+      "initiated_by": "partner-882abc",
+      "created_at": "2026-03-25T11:00:00Z"
+    },
+    {
+      "id": "txn_def456",
+      "type": "debit",
+      "amount": -12.45,
+      "currency": "INR",
+      "balance_before": 2450.00,
+      "balance_after": 2437.55,
+      "description": "Call usage — 27 calls, 415 minutes",
+      "created_at": "2026-03-25T23:59:00Z"
+    }
+  ],
+  "meta": {
+    "total": 48,
+    "page": 1,
+    "per_page": 20
+  }
+}
+```
+
+---
+
+## All transactions (global)
+
+**`GET https://api.vobiz.ai/api/v1/partner/transactions`**
+
+Returns a global reconciliation log — all transaction events across every customer under your partner account in a single paginated response. Supports the same filter parameters as the per-customer endpoint. Use for platform-wide monthly financial close.
+
+<CodeGroup>
+
+```bash Global transactions
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/transactions?page=1&per_page=50" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```bash Global billing cycle debits
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/transactions?from_date=2026-03-01&to_date=2026-03-31&transaction_type=debit&per_page=100" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+</CodeGroup>
+
+---
+
+## Response fields
+
+<ResponseField name="id" type="string">
+  Unique transaction ID. Store this for dispute resolution and deduplication.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Transaction type. See [Transaction types](#transaction-types) below.
+</ResponseField>
+
+<ResponseField name="amount" type="number">
+  Positive for credits (`recharge`, `refund`). Negative for debits.
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  Currency code (e.g. `INR`).
+</ResponseField>
+
+<ResponseField name="balance_before" type="number">
+  Customer wallet balance immediately before this transaction.
+</ResponseField>
+
+<ResponseField name="balance_after" type="number">
+  Customer wallet balance immediately after this transaction.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Human-readable note. Set by you on recharges; auto-generated for usage debits.
+</ResponseField>
+
+<ResponseField name="initiated_by" type="string">
+  Your partner `auth_id` for recharges. `system` for automatic usage debits.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  Transaction timestamp in UTC (ISO 8601).
+</ResponseField>
+
+---
+
+## Transaction types
+
+| Type | Description |
+|---|---|
+| `recharge` | Partner transferred balance to the customer wallet. Amount is positive. |
+| `debit` | Automatic usage deduction for completed calls. Amount is negative. |
+| `adjustment` | Manual balance correction by Vobiz support. Amount can be positive or negative. |
+| `refund` | Credit issued for a disputed charge or service outage. Amount is positive. |
+
+---
+
+## Monthly billing guide
+
+Use transactions to generate accurate invoices for your customers each billing cycle:
+
+<Steps>
+  <Step title="Pull all debits for the billing period">
+    Query `GET /accounts/{id}/transactions?transaction_type=debit&from_date=YYYY-MM-01&to_date=YYYY-MM-31`. Sum the `amount` fields for total usage cost.
+  </Step>
+  <Step title="Apply your margin">
+    Your customers pay you the Vobiz rate plus your markup. The debit `amount` is your cost. Invoice your customer for cost + margin.
+  </Step>
+  <Step title="Reconcile recharges">
+    Pull `transaction_type=recharge` for the same period to reconcile what you loaded into the customer wallet against what they consumed.
+  </Step>
+  <Step title="Global reconciliation">
+    Use `GET /transactions` (global) to sum all debits across all customers for your monthly Vobiz bill reconciliation.
+  </Step>
+</Steps>

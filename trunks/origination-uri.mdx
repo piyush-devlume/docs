@@ -1,0 +1,485 @@
+---
+title: "Origination URIs — Configure Outbound SIP Routing"
+description: "Configure SIP trunk outbound call routing. Manage origination URIs with priority-based failover and weighted load balancing across SIP destinations."
+sidebarTitle: "Origination URIs"
+---
+
+Origination URIs define the SIP endpoints where outbound calls from your trunk are routed. Each URI points to a carrier, PBX system, or any SIP-capable endpoint that receives your outbound traffic. You can configure multiple URIs per trunk to implement automatic failover and weighted load balancing.
+
+**Priority** controls failover order. Lower numbers have higher priority — priority 1 URIs are tried first, then priority 2 as fallback.
+
+**Weight** controls load distribution among URIs at the same priority. A URI with weight 20 receives twice the traffic of one with weight 10.
+
+## Use cases
+
+- **Carrier interconnection** — Route calls to a primary carrier with a backup carrier on priority 2 for automatic failover.
+- **PBX integration** — Send calls to a FreeSWITCH, Asterisk, or other SIP PBX for call processing.
+- **Load balancing** — Split traffic across multiple SIP servers using same-priority URIs with different weights.
+- **Geographic redundancy** — Point URIs at data centers in different regions; failing regions are skipped automatically.
+
+## The origination URI object
+
+<ResponseField name="id" type="string (UUID)">
+  Unique identifier. Auto-generated on creation.
+</ResponseField>
+
+<ResponseField name="trunk_id" type="string (UUID)">
+  The trunk this origination URI belongs to.
+</ResponseField>
+
+<ResponseField name="uri" type="string">
+  SIP URI destination. Format: `sip:user@host:port` or `sip:host:port`. Examples: `sip:provider@sip.example.com:5060`, `sip:192.168.1.100:5060`.
+</ResponseField>
+
+<ResponseField name="priority" type="integer">
+  Routing priority. Lower = higher priority. Default: `1`.
+</ResponseField>
+
+<ResponseField name="weight" type="integer">
+  Load balancing weight among URIs sharing the same priority. Higher = more traffic. Default: `10`.
+</ResponseField>
+
+<ResponseField name="enabled" type="boolean">
+  Whether this URI is active. Default: `true`.
+</ResponseField>
+
+<ResponseField name="created_at" type="string (ISO 8601)">
+  UTC creation timestamp.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string (ISO 8601)">
+  UTC last-updated timestamp.
+</ResponseField>
+
+**Example origination URI object**
+
+```json
+{
+  "id": "e1f2a3b4-c5d6-7890-efab-567890123456",
+  "trunk_id": "bfab10fb-cb97-488b-9c63-989c32980b0f",
+  "uri": "sip:provider@sip.example.com:5060",
+  "priority": 1,
+  "weight": 10,
+  "enabled": true,
+  "created_at": "2025-01-15T10:45:30Z",
+  "updated_at": "2025-01-15T10:45:30Z"
+}
+```
+
+---
+
+## Create an origination URI
+
+```
+POST https://api.vobiz.ai/api/v1/account/{auth_id}/origination-uris
+```
+
+**Headers:** `X-Auth-ID`, `X-Auth-Token`, `Content-Type: application/json`
+
+**Valid SIP URI formats**
+
+- `sip:provider@sip.example.com:5060` — domain with user prefix
+- `sip:192.168.1.100:5060` — IP address with port
+- `sip:trunk@sip.carrier.net:5061` — custom port
+
+### Parameters
+
+<ParamField body="uri" type="string" required>
+  SIP URI destination. Must include the `sip:` prefix and a port number.
+</ParamField>
+
+<ParamField body="priority" type="integer">
+  Routing priority. Lower = higher priority. Default: `1`. Use priority `2` for failover routes.
+</ParamField>
+
+<ParamField body="weight" type="integer">
+  Load balancing weight. Default: `10`. Higher values attract proportionally more traffic.
+</ParamField>
+
+<ParamField body="enabled" type="boolean">
+  Whether the URI is active for routing. Default: `true`.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL — primary URI
+curl -X POST https://api.vobiz.ai/api/v1/account/{Auth_ID}/origination-uris \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "uri": "sip:provider@sip.example.com:5060",
+    "priority": 1,
+    "weight": 10,
+    "enabled": true
+  }'
+```
+
+```bash cURL — failover URI
+curl -X POST https://api.vobiz.ai/api/v1/account/{Auth_ID}/origination-uris \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "uri": "sip:backup@sip-backup.example.com:5060",
+    "priority": 2,
+    "weight": 10,
+    "enabled": true
+  }'
+```
+
+```python Python
+import requests
+
+url = "https://api.vobiz.ai/api/v1/account/{Auth_ID}/origination-uris"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+payload = {
+    "uri": "sip:provider@sip.example.com:5060",
+    "priority": 1,
+    "weight": 10,
+    "enabled": True
+}
+
+response = requests.post(url, json=payload, headers=headers)
+uri = response.json()
+print(uri["id"])
+```
+
+```javascript Node.js
+const response = await fetch(
+  "https://api.vobiz.ai/api/v1/account/{Auth_ID}/origination-uris",
+  {
+    method: "POST",
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      uri: "sip:provider@sip.example.com:5060",
+      priority: 1,
+      weight: 10,
+      enabled: true
+    })
+  }
+);
+
+const uri = await response.json();
+console.log(uri.id);
+```
+
+</CodeGroup>
+
+**Response (201 Created)**
+
+```json
+{
+  "id": "e1f2a3b4-c5d6-7890-efab-567890123456",
+  "uri": "sip:provider@sip.example.com:5060",
+  "priority": 1,
+  "weight": 10,
+  "enabled": true,
+  "created_at": "2025-01-22T12:00:15Z",
+  "updated_at": "2025-01-22T12:00:15Z"
+}
+```
+
+**70/30 load balancing example**
+
+To split traffic 70% / 30% between two carriers at the same priority:
+
+```bash
+# 70% carrier
+curl -X POST https://api.vobiz.ai/api/v1/account/{Auth_ID}/origination-uris \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"uri": "sip:server1@sip.example.com:5060", "priority": 1, "weight": 70}'
+
+# 30% carrier
+curl -X POST https://api.vobiz.ai/api/v1/account/{Auth_ID}/origination-uris \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"uri": "sip:server2@sip.example.com:5060", "priority": 1, "weight": 30}'
+```
+
+---
+
+## List all origination URIs
+
+```
+GET https://api.vobiz.ai/api/v1/account/{auth_id}/trunks/origination-uris
+```
+
+**Query parameters**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | `20` | Results per page. Maximum: `100`. |
+| `offset` | integer | `0` | Results to skip for pagination. |
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET "https://api.vobiz.ai/api/v1/account/{Auth_ID}/trunks/origination-uris?limit=20&offset=0" \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+url = "https://api.vobiz.ai/api/v1/account/{Auth_ID}/trunks/origination-uris"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+params = {"limit": 20, "offset": 0}
+
+response = requests.get(url, headers=headers, params=params)
+data = response.json()
+
+for uri in data["objects"]:
+    print(uri["uri"], uri["priority"], uri["weight"])
+```
+
+```javascript Node.js
+const response = await fetch(
+  "https://api.vobiz.ai/api/v1/account/{Auth_ID}/trunks/origination-uris?limit=20&offset=0",
+  {
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    }
+  }
+);
+
+const data = await response.json();
+data.objects.forEach(u => console.log(u.uri, u.priority, u.weight));
+```
+
+</CodeGroup>
+
+**Response (200 OK)**
+
+```json
+{
+  "meta": {
+    "limit": 20,
+    "offset": 0,
+    "total_count": 3
+  },
+  "objects": [
+    {
+      "id": "e1f2a3b4-c5d6-7890-efab-567890123456",
+      "uri": "sip:provider@sip.example.com:5060",
+      "priority": 1,
+      "weight": 10,
+      "enabled": true,
+      "created_at": "2025-01-15T10:45:30Z",
+      "updated_at": "2025-01-15T10:45:30Z"
+    },
+    {
+      "id": "g3h4i5j6-k7l8-9012-mnop-789012345678",
+      "uri": "sip:secondary@sip.example.com:5060",
+      "priority": 1,
+      "weight": 20,
+      "enabled": true,
+      "created_at": "2025-01-15T11:15:00Z",
+      "updated_at": "2025-01-15T11:15:00Z"
+    },
+    {
+      "id": "f2g3h4i5-j6k7-8901-lmno-678901234567",
+      "uri": "sip:backup@sip-backup.example.com:5060",
+      "priority": 2,
+      "weight": 10,
+      "enabled": true,
+      "created_at": "2025-01-15T11:00:00Z",
+      "updated_at": "2025-01-15T11:00:00Z"
+    }
+  ]
+}
+```
+
+In this example: the two priority-1 URIs handle primary traffic (~33% and ~67% based on weights 10 and 20); the priority-2 URI serves as the failover if both priority-1 URIs fail.
+
+---
+
+## Update an origination URI
+
+Adjust priority, weight, SIP destination, or enabled status.
+
+```
+PUT https://api.vobiz.ai/api/v1/account/{auth_id}/origination-uris/{uri_id}
+```
+
+### Parameters
+
+All parameters are optional. Include only the fields you want to change.
+
+<ParamField body="uri" type="string">
+  Updated SIP URI destination.
+</ParamField>
+
+<ParamField body="priority" type="integer">
+  Updated routing priority.
+</ParamField>
+
+<ParamField body="weight" type="integer">
+  Updated load balancing weight.
+</ParamField>
+
+<ParamField body="enabled" type="boolean">
+  `false` to disable without deleting.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL — promote to primary
+curl -X PUT \
+  https://api.vobiz.ai/api/v1/account/{Auth_ID}/origination-uris/e1f2a3b4-c5d6-7890-efab-567890123456 \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"priority": 1}'
+```
+
+```bash cURL — update SIP destination
+curl -X PUT \
+  https://api.vobiz.ai/api/v1/account/{Auth_ID}/origination-uris/e1f2a3b4-c5d6-7890-efab-567890123456 \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"uri": "sip:newcarrier@sip.newprovider.com:5060"}'
+```
+
+```python Python
+import requests
+
+uri_id = "e1f2a3b4-c5d6-7890-efab-567890123456"
+url = f"https://api.vobiz.ai/api/v1/account/{{Auth_ID}}/origination-uris/{uri_id}"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+# Rebalance load: increase weight
+payload = {"weight": 50}
+
+response = requests.put(url, json=payload, headers=headers)
+print(response.json()["weight"])
+```
+
+```javascript Node.js
+const uriId = "e1f2a3b4-c5d6-7890-efab-567890123456";
+const response = await fetch(
+  `https://api.vobiz.ai/api/v1/account/{Auth_ID}/origination-uris/${uriId}`,
+  {
+    method: "PUT",
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ enabled: false })
+  }
+);
+
+const uri = await response.json();
+console.log(uri.enabled, uri.updated_at);
+```
+
+</CodeGroup>
+
+**Response (200 OK)**
+
+```json
+{
+  "id": "e1f2a3b4-c5d6-7890-efab-567890123456",
+  "uri": "sip:updated@sip.example.com:5060",
+  "priority": 1,
+  "weight": 50,
+  "enabled": true,
+  "created_at": "2025-01-15T10:45:30Z",
+  "updated_at": "2025-01-22T12:30:45Z"
+}
+```
+
+---
+
+## Delete an origination URI
+
+Permanently remove a routing destination from the trunk.
+
+```
+DELETE https://api.vobiz.ai/api/v1/account/{auth_id}/origination-uris/{uri_id}
+```
+
+<Warning>
+If you delete all origination URIs, your trunk cannot route any outbound calls. Always keep at least one active URI on production trunks. Consider disabling (`enabled: false`) instead of deleting.
+</Warning>
+
+Returns `204 No Content` on success.
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE \
+  https://api.vobiz.ai/api/v1/account/{Auth_ID}/origination-uris/e1f2a3b4-c5d6-7890-efab-567890123456 \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+uri_id = "e1f2a3b4-c5d6-7890-efab-567890123456"
+url = f"https://api.vobiz.ai/api/v1/account/{{Auth_ID}}/origination-uris/{uri_id}"
+headers = {
+    "X-Auth-ID": "YOUR_AUTH_ID",
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.delete(url, headers=headers)
+if response.status_code == 204:
+    print("Origination URI deleted.")
+```
+
+```javascript Node.js
+const uriId = "e1f2a3b4-c5d6-7890-efab-567890123456";
+const response = await fetch(
+  `https://api.vobiz.ai/api/v1/account/{Auth_ID}/origination-uris/${uriId}`,
+  {
+    method: "DELETE",
+    headers: {
+      "X-Auth-ID": "YOUR_AUTH_ID",
+      "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    }
+  }
+);
+
+if (response.status === 204) {
+  console.log("Origination URI deleted.");
+}
+```
+
+</CodeGroup>
+
+| Status | Meaning |
+|--------|---------|
+| `204 No Content` | URI deleted. |
+| `404 Not Found` | URI does not exist. |
+
+---
+
+## Best practices
+
+- Configure at least 2 URIs per trunk: one primary (priority 1) and one failover (priority 2).
+- Test connectivity to each SIP endpoint before putting it into production.
+- Use `enabled: false` to disable a URI during carrier maintenance instead of deleting it.
+- After a URI change, monitor call success rates for 15–30 minutes to confirm the routing is working.

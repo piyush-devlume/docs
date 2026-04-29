@@ -1,0 +1,218 @@
+---
+title: "Dial Element: Forward Calls to Numbers and SIP"
+description: "Dial connects callers to phone numbers or SIP endpoints. Configure caller ID, ring timeout, call confirmation screening, and action URL callbacks."
+sidebarTitle: "Dial"
+---
+
+The `<Dial>` element dials one or more phone numbers or SIP addresses and bridges the answered call to the current caller. Both parties can talk freely until either one hangs up. If the outbound call is not answered, receives a busy signal, or reaches an invalid destination, the `<Dial>` element ends and Vobiz continues to the next element in your XML. When the bridged call ends, Vobiz optionally posts the result to your `action` URL so you can continue controlling the call flow.
+
+<Note>
+  You must nest at least one `<Number>` or `<User>` element inside `<Dial>`. The element does nothing without them.
+</Note>
+
+## Nesting rules
+
+- Nest a single `<Number>` to dial one phone number.
+- Nest a single `<User>` to dial one SIP endpoint.
+- Nest multiple `<Number>` and `<User>` elements to ring them all simultaneously — the first to answer is bridged.
+
+## Attributes
+
+<ParamField body="action" type="string">
+  URL that Vobiz calls when the dialled call ends. Receives the parameters listed in the action URL table below.
+
+  **Allowed values:** fully qualified URL
+</ParamField>
+
+<ParamField body="method" type="string" default="POST">
+  HTTP method used when calling the `action` URL.
+
+  **Allowed values:** `GET`, `POST`
+</ParamField>
+
+<ParamField body="callerId" type="string">
+  The caller ID presented to the called party. Defaults to the current caller's caller ID.
+
+  **Allowed values:** valid phone number
+</ParamField>
+
+<ParamField body="callerName" type="string">
+  The caller name presented to the called party. Maximum 50 characters. Defaults to the caller's `callerName`.
+</ParamField>
+
+<ParamField body="timeout" type="integer">
+  Seconds the called party has to answer before `<Dial>` ends. No default — the carrier default applies if omitted.
+
+  **Allowed values:** positive integer
+</ParamField>
+
+<ParamField body="timeLimit" type="integer" default="14400">
+  Maximum duration in seconds for the bridged call. Defaults to 4 hours (14,400 seconds). Calls are disconnected after 24 hours regardless of this value.
+
+  **Allowed values:** positive integer
+</ParamField>
+
+<ParamField body="hangupOnStar" type="boolean" default="false">
+  When `true`, the caller can press `*` to disconnect the called party but remain on the line for further XML instructions.
+</ParamField>
+
+<ParamField body="redirect" type="boolean" default="true">
+  When `true`, Vobiz redirects the call to the `action` URL after `<Dial>` completes. When `false`, the `action` URL is fetched in the background.
+</ParamField>
+
+<ParamField body="confirmSound" type="string">
+  A URL that returns XML containing `<Play>`, `<Wait>`, or `<Speak>` elements. The resulting audio plays to the called party when they answer, before the bridge is established. Required for `confirmKey` to work.
+
+  **Allowed values:** fully qualified URL
+</ParamField>
+
+<ParamField body="confirmKey" type="string">
+  A digit the called party must press to accept the call. Used together with `confirmSound`.
+
+  **Allowed values:** any digit, `#`, `*`
+</ParamField>
+
+<ParamField body="confirmTimeout" type="string" default="120">
+  Timeout in seconds after the called party answers, used when `confirmSound` is provided without `confirmKey`. Set this value to be greater than the duration of the `confirmSound` audio.
+</ParamField>
+
+<ParamField body="dialMusic" type="string">
+  Music played to the caller while the outbound call is ringing. Provide a URL returning XML with `<Play>`, `<Wait>`, or `<Speak>` elements, or set to `real` to play the actual ring tone of the called party.
+
+  **Allowed values:** fully qualified URL, `real`
+</ParamField>
+
+<ParamField body="callbackUrl" type="string">
+  A URL notified when the called party answers, is connected, hangs up, or the caller presses a digit matching `digitsMatch`. See the callback parameters table below.
+
+  **Allowed values:** fully qualified URL
+</ParamField>
+
+<ParamField body="callbackMethod" type="string" default="POST">
+  HTTP method used when calling `callbackUrl`.
+
+  **Allowed values:** `GET`, `POST`
+</ParamField>
+
+<ParamField body="digitsMatch" type="string">
+  Comma-separated list of digit patterns on the A-leg. When the caller presses a matching sequence, the pattern is sent to `callbackUrl`.
+
+  **Example:** `digitsMatch="123,456,789"`
+</ParamField>
+
+<ParamField body="digitsMatchBLeg" type="string">
+  Comma-separated list of digit patterns on the B-leg. When the called party presses a matching sequence, the pattern is sent to `callbackUrl`.
+</ParamField>
+
+<ParamField body="sipHeaders" type="string">
+  Comma-separated `key=value` pairs sent as SIP headers (prefixed with `X-VH-`) on every HTTP request made by the dialled leg. Only alphanumeric characters are allowed in keys and values.
+
+  **Example:** `sipHeaders="head1=val1,head2=val2"`
+</ParamField>
+
+## Parameters sent to the action URL
+
+| Parameter | Description |
+|---|---|
+| `DialRingStatus` | Whether the dial attempt rang: `true` or `false`. |
+| `DialStatus` | Outcome of the dial: `completed`, `busy`, `failed`, `cancel`, `timeout`, or `no-answer`. |
+| `DialHangupCause` | Standard telephony hangup cause code. |
+| `DialALegUUID` | Call UUID of the A leg (the original caller). |
+| `DialBLegUUID` | Call UUID of the B leg. Empty if the call was not answered. |
+
+## Parameters sent to the callback URL
+
+| Parameter | Description |
+|---|---|
+| `DialAction` | The event that triggered the callback: `answer`, `connected`, `hangup`, or `digits`. |
+| `DialBLegStatus` | Whether the B leg answered or hung up: `answer`, `connected`, or `hangup`. |
+| `DialALegUUID` | Call UUID of the A leg. |
+| `DialBLegUUID` | Call UUID of the B leg. |
+| `DialDigitsMatch` | The matching digit sequence pressed by the A leg. Only present when `DialAction` is `digits`. |
+| `DialDigitsPressedBy` | Which leg pressed the digits: `ALeg` or `BLeg`. |
+| `DialBLegDuration` | Duration of the B leg in seconds. Only present when `DialAction` is `hangup`. |
+| `DialBLegBillDuration` | Billed duration of the B leg in seconds. Only present when `DialAction` is `hangup`. |
+| `DialBLegFrom` | Caller number or SIP endpoint for the B leg. |
+| `DialBLegTo` | Called number or SIP endpoint for the B leg. |
+| `DialBLegHangupCauseName` | Human-readable reason for the B-leg hangup. |
+| `DialBLegHangupCauseCode` | Integer code for the B-leg hangup cause. |
+| `DialBLegHangupSource` | The entity that triggered the hangup: `Caller`, `Callee`, `Vobiz`, `API Request`, `Answer XML`, `Error`, or `Unknown`. |
+| `STIRVerification` | STIR/SHAKEN attestation level: `Verified`, `Not Verified`, or `Not Applicable`. |
+
+## Examples
+
+### Forward to a single number
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Dial
+        callerId="+14155550100"
+        timeout="30"
+        action="https://yourapp.com/after-dial">
+        <Number>+14155551234</Number>
+    </Dial>
+    <Speak>The call could not be connected. Goodbye!</Speak>
+    <Hangup/>
+</Response>
+```
+
+### Simultaneous ring — first to answer wins
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Dial timeout="20" callerId="+14155550100">
+        <Number>+14155551001</Number>
+        <Number>+14155551002</Number>
+        <Number>+14155551003</Number>
+    </Dial>
+    <Speak>All agents are currently unavailable. Goodbye!</Speak>
+    <Hangup/>
+</Response>
+```
+
+### Call screening with confirmation
+
+Play a message to the called party and require them to press `1` before connecting.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Dial
+        timeout="30"
+        confirmSound="https://yourapp.com/confirm-prompt"
+        confirmKey="1"
+        action="https://yourapp.com/after-dial">
+        <Number>+14155551234</Number>
+    </Dial>
+</Response>
+```
+
+### Dial a SIP endpoint
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Dial callerId="+14155550100">
+        <User>sip:agent@yourpbx.example.com</User>
+    </Dial>
+</Response>
+```
+
+### Dial with callback notifications
+
+Receive an event when the B leg answers, connects, and hangs up.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Dial
+        timeout="30"
+        callbackUrl="https://yourapp.com/dial-events"
+        callbackMethod="POST"
+        action="https://yourapp.com/after-dial">
+        <Number>+14155551234</Number>
+    </Dial>
+</Response>
+```

@@ -1,0 +1,101 @@
+---
+title: "Retrieve All Live Calls on Your Account"
+description: "Get an array of call UUIDs for every call currently active on your Vobiz account. Use the UUIDs to fetch details or perform bulk operations."
+---
+
+Use this endpoint to get a snapshot of all calls currently in progress on your account. The response contains an array of call UUIDs that you can pass to other endpoints — for example, [Retrieve a Live Call](/call/retrieve-live-call) to fetch details, or [Hang Up a Call](/call/hangup-call) to terminate calls in bulk.
+
+```
+GET https://api.vobiz.ai/api/v1/account/{auth_id}/call/?status=live
+```
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your Vobiz account Auth ID.
+</ParamField>
+
+## Query parameters
+
+<ParamField query="status" type="string" required>
+  Must be set to `live` to filter for currently active calls only.
+</ParamField>
+
+## Response
+
+A successful request returns HTTP `200 OK` with an array of call UUIDs.
+
+```json
+{
+  "api_id": "c9527676-5839-11e1-86da-6ff39efcb949",
+  "calls": [
+    "eac94337-b1cd-499b-82d1-b39bca50dc31",
+    "0a70a7fb-168e-4944-a846-4f3f4d2f96f1"
+  ]
+}
+```
+
+<ResponseField name="api_id" type="string">
+  Unique identifier for this API request.
+</ResponseField>
+
+<ResponseField name="calls" type="string[]">
+  Array of call UUIDs for all currently active calls on your account.
+</ResponseField>
+
+## Code examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/account/{auth_id}/call/?status=live" \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+
+url = f"https://api.vobiz.ai/api/v1/account/{auth_id}/call/"
+params = {"status": "live"}
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.get(url, params=params, headers=headers)
+data = response.json()
+
+print(f"Active calls: {len(data['calls'])}")
+for call_uuid in data["calls"]:
+    print(call_uuid)
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+
+const response = await axios.get(
+  `https://api.vobiz.ai/api/v1/account/${authId}/call/`,
+  {
+    params: { status: "live" },
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    }
+  }
+);
+
+console.log(`Active calls: ${response.data.calls.length}`);
+console.log(response.data.calls);
+```
+
+</CodeGroup>
+
+<Tip>
+  Use the returned UUIDs with [Retrieve a Live Call](/call/retrieve-live-call) to fetch real-time details for each active call.
+</Tip>

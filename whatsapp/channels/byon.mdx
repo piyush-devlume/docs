@@ -1,0 +1,105 @@
+---
+title: "Bring Your Own Number (BYON) for WhatsApp"
+sidebarTitle: "BYON Setup"
+description: "Connect an existing phone number to WhatsApp Business on Vobiz. Step-by-step: Meta Business Manager setup, WABA creation, number verification, and access token."
+---
+
+The BYON (Bring Your Own Number) method lets you connect an existing phone number to WhatsApp Business through Vobiz — with no additional number cost. This guide covers the full process from Meta Business Manager setup to completing the connection in Vobiz.
+
+<Info>
+  **Time required:** 15–20 minutes if you have Meta Business Manager access. Make sure your number is **not** currently registered with WhatsApp or WhatsApp Business app before starting.
+</Info>
+
+## Prerequisites
+
+- Meta Business Manager account ([business.facebook.com](https://business.facebook.com))
+- A phone number that can receive SMS or voice calls for OTP verification
+- Admin or Developer role in Meta Business Manager
+- Active Vobiz account ([console.vobiz.ai](https://console.vobiz.ai))
+
+## Setup steps
+
+<Steps>
+  <Step title="Set up Meta Business Manager">
+    Go to [business.facebook.com](https://business.facebook.com) and log in. Create a business account if you don't have one, or select your existing business.
+  </Step>
+
+  <Step title="Create a WhatsApp Business Account (WABA)">
+    1. Click the menu icon and navigate to **Accounts → WhatsApp Accounts**.
+    2. Click **Add** and fill in:
+       - **WhatsApp Business Account Name** — your business name
+       - **Business Manager** — select your business
+       - **Time Zone** — your business timezone
+    3. After creation, copy your **WABA ID** (a 15–17 digit number, e.g. `102290129340398`). You'll need this for Vobiz.
+  </Step>
+
+  <Step title="Add and verify your phone number">
+    1. In your WhatsApp Business Account, click **Add phone number**.
+    2. Enter your number in international format (e.g., `+1 234 567 8900`).
+    3. Choose SMS or voice call for verification and enter the 6-digit code.
+    4. Once verified, click the phone number to view details and copy the **Phone Number ID** (e.g., `106540932419283`).
+  </Step>
+
+  <Step title="Create a System User and access token">
+    1. Go to **Business Settings → Users → System Users** and click **Add**.
+    2. Name it (e.g., `Vobiz Integration`), set role to **Admin**, and click **Create System User**.
+    3. Click **Add Assets**, select **WhatsApp Accounts**, choose your WABA, enable **Full control**, and save.
+    4. Click **Generate New Token**, select your app, and enable these permissions:
+       - `whatsapp_business_messaging`
+       - `whatsapp_business_management`
+    5. Copy the token immediately and store it securely — you won't be able to view it again.
+
+    <Warning>
+      The access token grants full access to your WhatsApp Business Account. Never expose it in client-side code or version control.
+    </Warning>
+  </Step>
+
+  <Step title="Connect to Vobiz">
+    1. Log in to [console.vobiz.ai](https://console.vobiz.ai).
+    2. Go to **Messaging → Channels** and click **Connect Channel → Bring Your Own Number (BYON)**.
+    3. Fill in the form with the values you collected:
+
+    | Field | Value |
+    |---|---|
+    | WABA ID | From Step 2 (e.g., `102290129340398`) |
+    | Phone Number ID | From Step 3 (e.g., `106540932419283`) |
+    | Access Token | System user token from Step 4 (starts with `EAA`) |
+    | Display Name | How your business name appears to customers |
+
+    4. Click **Connect Channel**. Vobiz verifies your credentials and the channel status changes to **Connected**.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Invalid Access Token">
+    - Token may have expired or been regenerated
+    - Token missing required permissions (`whatsapp_business_messaging`, `whatsapp_business_management`)
+    - System user doesn't have access to the WABA
+
+    **Fix:** Generate a new token with correct permissions and verify system user has Full control on the WABA.
+  </Accordion>
+  <Accordion title="Phone Number Not Found">
+    - Incorrect Phone Number ID
+    - Number not verified in Meta (no green checkmark)
+    - Number not associated with the WABA
+
+    **Fix:** Double-check the Phone Number ID in Meta Business Manager and confirm the number is verified under the correct WABA.
+  </Accordion>
+  <Accordion title="WABA Not Accessible">
+    - Incorrect WABA ID
+    - WABA is suspended or restricted
+    - System user lacks access
+
+    **Fix:** Verify the WABA ID under Meta Business Settings and ensure the system user is assigned to the WABA.
+  </Accordion>
+  <Accordion title="Can't generate an access token">
+    - No Meta app created yet
+    - Insufficient Business Manager permissions
+
+    **Fix:** Create a Meta app at [developers.facebook.com](https://developers.facebook.com), add the WhatsApp product, and ensure you have Admin role in Business Manager.
+  </Accordion>
+</AccordionGroup>
+
+Need more help? Email [support@vobiz.ai](mailto:support@vobiz.ai).

@@ -1,0 +1,96 @@
+---
+title: "The Call Object: Fields and Descriptions"
+description: "Reference for every field on a Vobiz Call object, including status, timestamps, duration, billing, hangup cause, and STIR/SHAKEN attestation."
+---
+
+A Call object is created automatically when an outbound call is initiated or when an inbound call is received. Every field described below may appear in API responses from the retrieve, live-call, and callback endpoints. Use `call_uuid` (also returned as `request_uuid`) to reference a specific call in subsequent API operations.
+
+<Note>
+  Billing fields such as `total_amount`, `billed_duration`, and `total_rate` are only populated after the call ends. They are `null` while the call is active.
+</Note>
+
+## Attributes
+
+<ResponseField name="answer_time" type="string">
+  Timestamp when the call was answered. Uses the local timezone configured in your Vobiz console. Format: `yyyy-MM-dd HH:mm:ss`.
+</ResponseField>
+
+<ResponseField name="bill_duration" type="integer">
+  Duration of the call in seconds used for billing calculation.
+</ResponseField>
+
+<ResponseField name="billed_duration" type="integer">
+  Billed duration in seconds. May differ from `bill_duration` depending on the billing interval of the destination number.
+</ResponseField>
+
+<ResponseField name="call_direction" type="string">
+  Direction of the call. Possible values: `outbound`, `inbound`.
+</ResponseField>
+
+<ResponseField name="call_duration" type="integer">
+  Total duration of the call in seconds.
+</ResponseField>
+
+<ResponseField name="call_uuid" type="string">
+  Unique identifier for the call. Also returned as `request_uuid` — both values are equivalent and interchangeable.
+</ResponseField>
+
+<ResponseField name="end_time" type="string">
+  Timestamp when the call ended. Uses the local timezone configured in your Vobiz console. Format: `yyyy-MM-dd HH:mm:ss`. Null while the call is active.
+</ResponseField>
+
+<ResponseField name="from_number" type="string">
+  Caller ID used to initiate the call.
+</ResponseField>
+
+<ResponseField name="hangup_cause_code" type="integer">
+  Integer code identifying the reason the call was hung up.
+</ResponseField>
+
+<ResponseField name="hangup_cause_name" type="string">
+  Human-readable name for the hangup cause (for example, `NORMAL_CLEARING`).
+</ResponseField>
+
+<ResponseField name="hangup_source" type="string">
+  The entity that triggered the hangup. Possible values: `Caller`, `Callee`, `Vobiz`, `API Request`, `Answer XML`, `Error`, `Unknown`.
+</ResponseField>
+
+<ResponseField name="initiation_time" type="string">
+  Timestamp when the call was initiated. Uses the local timezone configured in your Vobiz console. Format: `yyyy-MM-dd HH:mm:ss`.
+</ResponseField>
+
+<ResponseField name="parent_call_uuid" type="string">
+  UUID of the A-leg when this call object represents a B-leg. Null for single-leg calls.
+</ResponseField>
+
+<ResponseField name="resource_uri" type="string">
+  Relative URI of this call resource, for example `/v1/Account/{auth_id}/Call/{call_uuid}/`.
+</ResponseField>
+
+<ResponseField name="source_ip" type="string">
+  IP address from which the call request originated. Useful for monitoring unauthorized access or misuse.
+</ResponseField>
+
+<ResponseField name="stir_verification" type="string">
+  STIR/SHAKEN attestation information.
+
+  - **Outbound calls:** Attestation level assigned by Vobiz.
+  - **Inbound calls:** Attestation received on the call to your Vobiz number.
+
+  Possible values:
+  - `Verified` — Call is from a verified caller (Attestation A).
+  - `Not Verified` — Caller is not verified or verification is uncertain (Attestation B or C).
+  - `Not Applicable` — STIR/SHAKEN does not apply (non-US calls, cloud-originated calls, etc.).
+</ResponseField>
+
+<ResponseField name="to_number" type="string">
+  The destination number the call was placed to.
+</ResponseField>
+
+<ResponseField name="total_amount" type="string">
+  Total amount charged for the call. Null until the call ends and billing is finalized.
+</ResponseField>
+
+<ResponseField name="total_rate" type="string">
+  Per-minute rate based on the destination number. Null until the call ends.
+</ResponseField>

@@ -1,0 +1,163 @@
+---
+title: "Vobiz XML Reference: Control Call Flow with XML"
+description: "Learn how Vobiz XML works, explore every verb element, and build your first IVR, voicemail, and call-routing flows with hands-on examples."
+sidebarTitle: "Overview"
+---
+
+Vobiz XML is a markup language that tells the Vobiz platform how to handle voice calls. When your application receives a webhook for an incoming or outgoing call, you respond with an XML document containing instructions — play audio, collect input, record a message, dial out, and more. Vobiz reads those instructions in order and executes each one, making it straightforward to build everything from a simple greeting to a multi-step IVR without managing low-level telephony.
+
+## How XML works
+
+Every Vobiz XML interaction follows the same request-response loop.
+
+<Steps>
+  <Step title="A call event occurs">
+    An incoming call arrives or an outbound call connects. Vobiz needs instructions on what to do next.
+  </Step>
+  <Step title="Vobiz sends a webhook">
+    Vobiz sends an HTTP POST to your configured Answer URL or Action URL, including call details such as caller ID, call UUID, collected digits, or recording URLs.
+  </Step>
+  <Step title="Your application responds with XML">
+    Your server processes the request — query a database, apply business rules, or look up a customer record — and returns an XML document wrapped in a `<Response>` element.
+  </Step>
+  <Step title="Vobiz executes the XML">
+    Vobiz parses your document and runs each verb element in sequence: speaking text, collecting input, dialing numbers, recording audio, and so on.
+  </Step>
+  <Step title="The loop continues">
+    When your XML includes action URLs (for example, after a `<Gather>` or `<Record>`), Vobiz requests fresh XML from those URLs and the cycle repeats.
+  </Step>
+</Steps>
+
+## The `<Response>` root element
+
+Every Vobiz XML document must have exactly one `<Response>` element wrapping all other instructions. Verb elements are executed in the order they appear inside it.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <!-- verb elements go here -->
+</Response>
+```
+
+<Note>
+  Set the HTTP `Content-Type` header of your response to `application/xml` or `text/xml` so Vobiz parses it correctly.
+</Note>
+
+## Verb elements
+
+Verb elements instruct Vobiz to perform specific actions on the call.
+
+<CardGroup cols={2}>
+  <Card title="Speak" icon="microphone" href="/xml/speak">
+    Convert text to speech and play it to the caller. Supports multiple languages and voices.
+  </Card>
+  <Card title="Play" icon="play">
+    Play an MP3 or WAV audio file from a remote URL.
+  </Card>
+  <Card title="Gather" icon="keyboard" href="/xml/gather">
+    Collect DTMF digits or speech from the caller. Nest `<Speak>` or `<Play>` inside to prompt for input.
+  </Card>
+  <Card title="Dial" icon="phone" href="/xml/dial">
+    Dial a phone number or SIP address and bridge it to the current caller.
+  </Card>
+  <Card title="Record" icon="circle-dot" href="/xml/record">
+    Record the call audio and receive the recording URL at an action URL when complete.
+  </Card>
+  <Card title="Conference" icon="users" href="/xml/conference">
+    Connect the caller to a named conference room shared with other participants.
+  </Card>
+  <Card title="Stream" icon="signal" href="/xml/stream">
+    Stream raw audio to an external WebSocket service for real-time transcription or AI processing.
+  </Card>
+  <Card title="Hangup" icon="phone-off">
+    Terminate the call immediately, optionally with a reason such as `busy` or `rejected`.
+  </Card>
+  <Card title="Redirect" icon="arrow-right">
+    Transfer control of the call to a different URL, fetching a new XML response.
+  </Card>
+  <Card title="Wait" icon="clock">
+    Pause execution silently for a specified number of seconds.
+  </Card>
+  <Card title="DTMF" icon="hash">
+    Send DTMF tones on a live call to navigate third-party IVR systems.
+  </Card>
+  <Card title="PreAnswer" icon="signal-low">
+    Answer the call in early media mode to play audio before the call is fully connected.
+  </Card>
+</CardGroup>
+
+## Examples
+
+### Hello World
+
+The simplest possible XML response: greet the caller and hang up.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak>Hello! Welcome to Vobiz telephony platform.</Speak>
+    <Hangup/>
+</Response>
+```
+
+### IVR menu
+
+Collect a single digit from the caller and route to your action URL.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Gather
+        numDigits="1"
+        timeout="10"
+        finishOnKey="#"
+        action="https://yourapp.com/menu-choice"
+        method="POST">
+        <Speak>
+            Press 1 for account information.
+            Press 2 to speak with a representative.
+            Press 9 to repeat this menu.
+        </Speak>
+    </Gather>
+    <Speak>We didn't receive any input. Goodbye!</Speak>
+    <Hangup/>
+</Response>
+```
+
+### Voicemail recording
+
+Prompt the caller to leave a message and post the recording to your server.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Speak>Please leave a message after the beep.</Speak>
+    <Play>https://yourcdn.com/beep.mp3</Play>
+    <Record
+        maxLength="120"
+        timeout="5"
+        finishOnKey="#"
+        action="https://yourapp.com/recording-complete"
+        recordSession="false"/>
+    <Speak>Thank you for your message. Goodbye!</Speak>
+    <Hangup/>
+</Response>
+```
+
+## Best practices
+
+**Start simple.** Build and test each verb element in isolation before combining them into a complex flow.
+
+**Always set timeouts.** Use the `executionTimeout` and `timeout` attributes on `<Gather>` and `<Record>` to handle callers who do not respond.
+
+**Handle failures.** Provide a fallback path — a `<Speak>` followed by `<Hangup>` or `<Redirect>` — for every branch where input collection might not succeed.
+
+**Log everything.** Record all incoming webhook parameters and your outgoing XML responses. Attach the call UUID to every log entry so you can reconstruct any call flow.
+
+**Write user-friendly prompts.** Keep spoken instructions concise, avoid jargon, and repeat options when a caller does not respond.
+
+**Validate your XML.** Always produce well-formed XML with proper opening and closing tags, escaped special characters (`&amp;`, `&lt;`, `&gt;`, `&quot;`), and UTF-8 encoding.
+
+<Tip>
+  Use the [XML Builder](/xml-builder) to generate valid Vobiz XML interactively without writing code.
+</Tip>

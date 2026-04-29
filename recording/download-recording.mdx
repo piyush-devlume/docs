@@ -1,0 +1,166 @@
+---
+title: "Download a Vobiz recording file programmatically"
+description: "How to download Vobiz recording audio files: authentication requirements, direct download flow, and how to fix 401 errors in browser-based audio players."
+sidebarTitle: "Download recording"
+---
+
+Downloading a Vobiz recording is a multi-step process because every request to the audio file must be authenticated with your API credentials. Standard HTML `<audio>` tags cannot send custom headers, which is why direct embedding in a browser player fails with a 401 error.
+
+Follow the three steps below to list, retrieve, and download a recording file.
+
+## Step 1 — List your recordings
+
+Retrieve a list of available recordings to find the `recording_id` you need.
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET "https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Recording/?limit=20" \
+  -H "X-Auth-ID: {Auth_ID}" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+response = requests.get(
+    f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Recording/",
+    headers={
+        "X-Auth-ID": auth_id,
+        "X-Auth-Token": "YOUR_AUTH_TOKEN",
+        "Content-Type": "application/json"
+    },
+    params={"limit": 20}
+)
+recordings = response.json()["recordings"]
+print(recordings[0]["recording_id"])
+```
+
+```javascript Node.js
+const axios = require("axios");
+const authId = "YOUR_AUTH_ID";
+
+const listResponse = await axios.get(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Recording/`,
+  {
+    headers: { "X-Auth-ID": authId, "X-Auth-Token": "YOUR_AUTH_TOKEN" },
+    params: { limit: 20 },
+  }
+);
+const recordingId = listResponse.data.recordings[0].recording_id;
+console.log(recordingId);
+```
+
+</CodeGroup>
+
+## Step 2 — Retrieve recording metadata
+
+Use the `recording_id` from step 1 to fetch the full recording object including the `recording_url`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET "https://api.vobiz.ai/api/v1/Account/{Auth_ID}/Recording/{recording_id}/" \
+  -H "X-Auth-ID: {Auth_ID}" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+recording_id = "d7801b2e-e76d-4dd8-be9c-9e015a7267b8"
+
+response = requests.get(
+    f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Recording/{recording_id}/",
+    headers={
+        "X-Auth-ID": auth_id,
+        "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    }
+)
+recording_url = response.json()["objects"][0]["recording_url"]
+print(recording_url)
+```
+
+```javascript Node.js
+const axios = require("axios");
+const authId = "YOUR_AUTH_ID";
+const recordingId = "d7801b2e-e76d-4dd8-be9c-9e015a7267b8";
+
+const detailResponse = await axios.get(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Recording/${recordingId}/`,
+  { headers: { "X-Auth-ID": authId, "X-Auth-Token": "YOUR_AUTH_TOKEN" } }
+);
+const recordingUrl = detailResponse.data.objects[0].recording_url;
+console.log(recordingUrl);
+```
+
+</CodeGroup>
+
+## Step 3 — Download the audio file
+
+Pass your authentication headers when downloading. The `-L` flag follows server redirects.
+
+<CodeGroup>
+
+```bash cURL
+curl -L "https://media.vobiz.ai/v1/Account/{Auth_ID}/Recording/{recording_id}.wav" \
+  -H "X-Auth-ID: {Auth_ID}" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -o my_recording.wav
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+recording_url = "https://media.vobiz.ai/v1/Account/MA_XXXXXX/Recording/d7801b2e-e76d-4dd8-be9c-9e015a7267b8.mp3"
+
+response = requests.get(
+    recording_url,
+    headers={
+        "X-Auth-ID": auth_id,
+        "X-Auth-Token": "YOUR_AUTH_TOKEN"
+    },
+    allow_redirects=True
+)
+
+with open("recording.mp3", "wb") as f:
+    f.write(response.content)
+print("Download complete.")
+```
+
+```javascript Node.js
+const axios = require("axios");
+const fs = require("fs");
+
+const authId = "YOUR_AUTH_ID";
+const recordingUrl = "https://media.vobiz.ai/v1/Account/MA_XXXXXX/Recording/d7801b2e-e76d-4dd8-be9c-9e015a7267b8.mp3";
+
+const fileResponse = await axios.get(recordingUrl, {
+  headers: { "X-Auth-ID": authId, "X-Auth-Token": "YOUR_AUTH_TOKEN" },
+  responseType: "stream",
+});
+
+fileResponse.data.pipe(fs.createWriteStream("recording.mp3"));
+console.log("Download complete.");
+```
+
+</CodeGroup>
+
+## Fixing 401 errors in browser playback
+
+Standard HTML `<audio>` and `<video>` tags cannot send custom HTTP headers like `X-Auth-ID`. This causes a `401 Unauthorized` error when attempting to play recordings directly in a browser dashboard.
+
+Use one of the following approaches to resolve this:
+
+**Server-side proxy**
+
+Create an endpoint on your backend (e.g., `/api/play?id=123`) that fetches the recording file from Vobiz using your credentials and streams the binary data back to the client. Your frontend `<audio>` tag points to your own endpoint instead of the Vobiz URL.
+
+**Pre-download and serve**
+
+Download recordings to your own storage using server-side logic, then serve them as static files directly to clients.

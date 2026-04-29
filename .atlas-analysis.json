@@ -1,0 +1,264 @@
+{
+  "projectType": "api-service",
+  "projectName": "Vobiz",
+  "projectDescription": "Enterprise-grade SIP trunking, programmable voice APIs, and real-time AI voice agent integrations for developers.",
+  "theme": "luma",
+  "primaryColor": "#eb3c04",
+  "lightColor": "#140404",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quick-start",
+              "concepts/overview"
+            ]
+          },
+          {
+            "group": "Voice & Calls",
+            "pages": [
+              "call/overview",
+              "call/make-call",
+              "call/transfer-call",
+              "call/record-calls",
+              "call/machine-detection",
+              "call/dtmf"
+            ]
+          },
+          {
+            "group": "SIP & Trunking",
+            "pages": [
+              "trunks/overview",
+              "trunks/credentials",
+              "trunks/ip-acl",
+              "trunks/origination-uri",
+              "endpoint/overview"
+            ]
+          },
+          {
+            "group": "Voice XML",
+            "pages": [
+              "xml/overview",
+              "xml/speak",
+              "xml/gather",
+              "xml/dial",
+              "xml/record",
+              "xml/stream",
+              "xml/conference",
+              "xml-builder"
+            ]
+          },
+          {
+            "group": "Messaging",
+            "pages": [
+              "whatsapp/getting-started/quick-start",
+              "whatsapp/channels",
+              "whatsapp/messaging",
+              "whatsapp/webhooks"
+            ]
+          },
+          {
+            "group": "Guides & Examples",
+            "pages": [
+              "guides/ai-voice-agent",
+              "examples/livekit-vobiz-outbound",
+              "examples/livekit-vobiz-inbound",
+              "examples/vobiz-ivr-xml-python",
+              "best-practices"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "concepts/callbacks",
+              "concepts/sip-trunking",
+              "concepts/streaming-websockets",
+              "cdr",
+              "errors",
+              "faq"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Account",
+            "pages": [
+              "account/retrieve-account",
+              "account-phone-number/list-account-phone-numbers",
+              "account-phone-number/purchase-from-inventory",
+              "account-phone-number/unrent-number",
+              "sub-accounts/create-subaccount",
+              "sub-accounts/list-all-subaccounts",
+              "sub-accounts/retrieve-subaccount",
+              "sub-accounts/update-subaccount",
+              "sub-accounts/delete-subaccount"
+            ]
+          },
+          {
+            "group": "Calls",
+            "pages": [
+              "call/call-object",
+              "call/make-call",
+              "call/hangup-call",
+              "call/transfer-call",
+              "call/retrieve-live-call",
+              "call/retrieve-all-live-calls",
+              "call/record-calls",
+              "call/play-audio",
+              "call/speak-text",
+              "call/dtmf/send-digits"
+            ]
+          },
+          {
+            "group": "Applications",
+            "pages": [
+              "applications/application-object",
+              "applications/create-application",
+              "applications/retrieve-application",
+              "applications/list-all-applications",
+              "applications/update-application",
+              "applications/delete-application",
+              "applications/link-numbers"
+            ]
+          },
+          {
+            "group": "Conferences",
+            "pages": [
+              "conference/conference-object",
+              "conference/retrieve-conference",
+              "conference/retrieve-all-conferences",
+              "conference/members",
+              "conference/recording",
+              "conference/hang-up-conference"
+            ]
+          },
+          {
+            "group": "Recordings",
+            "pages": [
+              "recording/recording-object",
+              "recording/list-all-recordings",
+              "recording/retrieve-recording",
+              "recording/download-recording",
+              "recording/delete-recording",
+              "recording/export-historical-recordings"
+            ]
+          },
+          {
+            "group": "SIP Trunks",
+            "pages": [
+              "trunks/trunk-object",
+              "trunks/create-trunk",
+              "trunks/retrieve-trunk",
+              "trunks/retrieve-all-trunks",
+              "trunks/update-trunk",
+              "trunks/delete-trunk",
+              "trunks/assign-number",
+              "trunks/unassign-number"
+            ]
+          },
+          {
+            "group": "Audio Streams",
+            "pages": [
+              "audio-streams/stream-object",
+              "audio-streams/start-audio-stream",
+              "audio-streams/stop-audio-stream",
+              "audio-streams/list-audio-streams",
+              "audio-streams/retrieve-audio-stream"
+            ]
+          },
+          {
+            "group": "WhatsApp",
+            "pages": [
+              "whatsapp/api/send-message",
+              "whatsapp/webhooks/events"
+            ]
+          },
+          {
+            "group": "Partner API",
+            "pages": [
+              "partner/api/authentication",
+              "partner/api/customers",
+              "partner/api/balance",
+              "partner/api/numbers",
+              "partner/api/cdrs",
+              "partner/api/transactions",
+              "partner/api/analytics"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Integrations",
+        "groups": [
+          {
+            "group": "AI Voice Platforms",
+            "pages": [
+              "integrations/vapi-dashboard",
+              "integrations/retellai-dashboard",
+              "integrations/elevenlabs-dashboard",
+              "integrations/livekit",
+              "integrations/pipecat",
+              "integrations/bolna",
+              "integrations/ultravox",
+              "integrations/openai-realtime"
+            ]
+          },
+          {
+            "group": "SDKs",
+            "pages": [
+              "integrations/node-sdk",
+              "integrations/python-sdk",
+              "integrations/ruby-sdk",
+              "integrations/go-sdk",
+              "integrations/csharp-sdk"
+            ]
+          },
+          {
+            "group": "WebRTC & WebSockets",
+            "pages": [
+              "integrations/webrtc-application-setup",
+              "integrations/websockets"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Enterprise SIP trunking with global PSTN connectivity",
+    "Programmable Voice API for outbound/inbound call control",
+    "Voice XML for dynamic IVR and call flow automation",
+    "Real-time audio streaming via WebSockets",
+    "AI voice agent integrations (VAPI, Retell AI, ElevenLabs, LiveKit, Pipecat)",
+    "Call recording, transcription, and CDR access",
+    "Conference calling and multi-party call management",
+    "WhatsApp Business messaging and campaigns",
+    "Sub-account and partner reseller management",
+    "Official SDKs for Node.js, Python, Ruby, Go, and C#"
+  ],
+  "publicApiSurface": [
+    "POST /v1/Account/{auth_id}/Call/ — make outbound call",
+    "DELETE /v1/Account/{auth_id}/Call/{call_uuid}/ — hang up call",
+    "POST /v1/Account/{auth_id}/Call/{call_uuid}/Transfer/ — transfer call",
+    "GET /v1/Account/{auth_id}/Call/ — list live calls",
+    "POST /v1/Account/{auth_id}/Application/ — create application",
+    "POST /v1/Account/{auth_id}/Conference/ — manage conferences",
+    "GET /v1/Account/{auth_id}/Recording/ — list recordings",
+    "POST /v1/trunk/ — create SIP trunk",
+    "POST /v1/trunk/{trunk_id}/credential/ — create trunk credential",
+    "GET /v1/Account/{auth_id}/PhoneNumber/ — list phone numbers",
+    "POST /v1/Account/{auth_id}/SubAccount/ — create sub-account",
+    "POST /v1/Account/{auth_id}/AudioStream/ — start audio stream",
+    "POST /partner/customers — create partner customer",
+    "POST /partner/balance/transfer — transfer balance to customer",
+    "GET /partner/cdrs — retrieve customer CDRs"
+  ]
+}

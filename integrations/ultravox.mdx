@@ -1,0 +1,90 @@
+---
+title: "Integrate Vobiz SIP trunking with Ultravox"
+description: "Set up outbound AI calls with Ultravox and Vobiz SIP credentials. Full API call structure, parameter reference, call lifecycle walkthrough, and troubleshooting."
+sidebarTitle: "Ultravox"
+---
+
+Ultravox is a multimodal AI platform that handles both speech understanding and generation natively. To make outbound phone calls with Ultravox, you send a single API request containing your Vobiz SIP credentials. Ultravox initiates the SIP INVITE to Vobiz, which dials out over the PSTN—no SIP trunking configuration in Vobiz is required on the inbound side for outbound-only flows.
+
+## How it works
+
+Unlike inbound-first integrations, you do not configure Vobiz to forward calls to Ultravox. Instead, you instruct Ultravox to push a call **through** Vobiz to the destination number. Vobiz acts as your outbound SIP carrier.
+
+## Step 1: Gather your credentials
+
+You need the following before making the API call:
+
+| Source | Item | Where to find it |
+|---|---|---|
+| Ultravox | API Key | [app.ultravox.ai](https://app.ultravox.ai) → API Keys |
+| Ultravox | Agent ID | [app.ultravox.ai](https://app.ultravox.ai) → Agents |
+| Vobiz | SIP Domain | [Vobiz Console](https://console.vobiz.ai) → Trunks |
+| Vobiz | Username | [Vobiz Console](https://console.vobiz.ai) → Trunks |
+| Vobiz | Password | [Vobiz Console](https://console.vobiz.ai) → Trunks |
+| Vobiz | From Number | [Vobiz Console](https://console.vobiz.ai) → Numbers |
+
+Your Vobiz SIP credentials are in **Vobiz Console → SIP Trunk → Outbound Trunks → Trunks → Your Trunk → Authentication & Linking**.
+
+## Step 2: Initiate an outbound call
+
+Send a POST request to Ultravox with your agent ID and Vobiz credentials. Ultravox handles all SIP negotiation with Vobiz automatically.
+
+```bash
+curl -X POST "https://api.ultravox.ai/api/agents/YOUR_AGENT_ID/calls" \
+     -H "X-API-Key: YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "medium": {
+         "sip": {
+           "outgoing": {
+             "to": "sip:+919XXXXXXXXX@YOUR_VOBIZ_DOMAIN.sip.vobiz.ai",
+             "from": "YOUR_VOBIZ_NUMBER",
+             "username": "YOUR_VOBIZ_USERNAME",
+             "password": "YOUR_VOBIZ_PASSWORD"
+           }
+         }
+       },
+       "firstSpeakerSettings": {
+         "user": {}
+       }
+     }'
+```
+
+## Step 3: Understand the critical parameters
+
+| Parameter | Description |
+|---|---|
+| `to` | The destination SIP URI. Format: `sip:NUMBER@VOBIZ_DOMAIN`. Example: `sip:+15550001234@abc123.sip.vobiz.ai` |
+| `from` | Your Vobiz caller ID. Must be a number you own on Vobiz—most SIP providers reject calls if the from number is not verified. |
+| `firstSpeakerSettings: { "user": {} }` | Tells Ultravox to wait for the human to speak first. Without this, the AI may finish its greeting while the call is still connecting. |
+
+<Warning>
+Always set `firstSpeakerSettings` to `{ "user": {} }` for outbound calls. If omitted, the AI starts speaking before the call fully connects, and the greeting is lost.
+</Warning>
+
+## Step 4: Call lifecycle
+
+When you run the API request above, the following sequence occurs:
+
+1. **Request:** Ultravox returns a `callId` immediately.
+2. **SIP INVITE:** Ultravox sends a SIP INVITE to your Vobiz SIP domain using the credentials you provided.
+3. **Ringing:** The destination phone starts ringing. SIP billing on Vobiz begins at this point.
+4. **Answer:** The user picks up and says "Hello."
+5. **Conversation:** Ultravox detects speech and your AI agent starts the conversation.
+
+## Troubleshooting outbound calls
+
+If the call does not connect, retrieve the SIP logs from Ultravox to see the exact reason Vobiz rejected the request:
+
+```bash
+curl -X GET "https://api.ultravox.ai/api/calls/CALL_ID/sip/logs" \
+     -H "X-API-Key: YOUR_API_KEY"
+```
+
+Replace `CALL_ID` with the ID returned when you initiated the call.
+
+| SIP response | Cause | Fix |
+|---|---|---|
+| `403 Forbidden` | Wrong username/password | Verify credentials in Vobiz Console → Trunks |
+| `407 Proxy Authentication Required` | Normal challenge-response | Ultravox handles this automatically using your password |
+| `480 Temporarily Unavailable` | Destination is busy or unreachable | Check the destination number and try again |

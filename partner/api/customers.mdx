@@ -1,0 +1,376 @@
+---
+title: "Partner API: Customer Account Management"
+sidebarTitle: "Customer accounts"
+description: "Provision and manage customer sub-accounts via the Partner API. Each customer receives an auth_id for balance transfers, CDR queries, and number assignments."
+---
+
+The Customer Accounts API is the foundation of the Partner Portal. Use it to provision SIP-enabled sub-accounts for your clients, retrieve their profiles, and monitor their real-time wallet balances. Every customer is identified by a unique `auth_id` that you use across all subsequent balance, CDR, transaction, and number operations.
+
+## Endpoints at a glance
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/partner/accounts` | Create a new customer account |
+| `GET` | `/api/v1/partner/accounts` | List all customer accounts (paginated) |
+| `GET` | `/api/v1/partner/accounts/{customer_auth_id}` | Get a specific customer's full profile |
+| `GET` | `/api/v1/partner/accounts/{customer_auth_id}/balance` | Get real-time wallet balance |
+
+---
+
+## Create a customer account
+
+**`POST https://api.vobiz.ai/api/v1/partner/accounts`**
+
+Provision a new SIP-enabled Vobiz account under your partner umbrella. The account is created immediately. The customer can start receiving calls as soon as you assign them a phone number and fund their wallet.
+
+### Request body
+
+<ParamField body="name" type="string" required>
+  Customer display name.
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Login email for the customer account.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Initial password. Minimum 8 characters. Must include at least one special character and one number.
+</ParamField>
+
+<ParamField body="phone" type="string" required>
+  Contact phone number for the account.
+</ParamField>
+
+<ParamField body="country" type="string" required>
+  ISO country code (e.g. `IN`, `US`, `GB`).
+</ParamField>
+
+<ParamField body="description" type="string">
+  Internal notes about this customer. Not visible to the customer.
+</ParamField>
+
+<ParamField body="company" type="string">
+  Legal company or business name.
+</ParamField>
+
+<ParamField body="address" type="string">
+  Street address.
+</ParamField>
+
+<ParamField body="city" type="string">
+  City.
+</ParamField>
+
+<ParamField body="state" type="string">
+  State or province.
+</ParamField>
+
+<ParamField body="zip_code" type="string">
+  Postal or ZIP code.
+</ParamField>
+
+<ParamField body="timezone" type="string">
+  IANA timezone string (e.g. `Asia/Kolkata`).
+</ParamField>
+
+<ParamField body="gstin" type="string">
+  GST Identification Number. India only.
+</ParamField>
+
+<ParamField body="gst_status" type="string">
+  `"active"` or `"inactive"`. Affects tax treatment on invoices.
+</ParamField>
+
+<ParamField body="account_type" type="string" default="standard">
+  Account tier. Default: `"standard"`.
+</ParamField>
+
+### Response
+
+Returns HTTP `201 Created` with the new account details.
+
+<ResponseField name="auth_id" type="string">
+  The customer's permanent identifier. **Store this immediately** — it is the primary key for all balance transfers, CDR lookups, transaction queries, and number assignments.
+</ResponseField>
+
+<ResponseField name="name" type="string">Customer display name.</ResponseField>
+<ResponseField name="email" type="string">Customer account email.</ResponseField>
+<ResponseField name="status" type="string">Account status. `"active"` on creation.</ResponseField>
+<ResponseField name="balance" type="number">Starting wallet balance. Always `0.00` on creation.</ResponseField>
+<ResponseField name="currency" type="string">Account currency (e.g. `INR`).</ResponseField>
+<ResponseField name="country" type="string">ISO country code.</ResponseField>
+<ResponseField name="timezone" type="string">IANA timezone string.</ResponseField>
+<ResponseField name="created_at" type="string">ISO 8601 timestamp of account creation.</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  "https://api.vobiz.ai/api/v1/partner/accounts" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Credresolve",
+    "email": "admin@credresolve.com",
+    "password": "SecurePass@123",
+    "phone": "9431538535",
+    "description": "Outbound collections calling team",
+    "company": "Credresolve Private Limited",
+    "address": "123 Brigade Road",
+    "city": "Bangalore",
+    "state": "Karnataka",
+    "zip_code": "560001",
+    "country": "IN",
+    "timezone": "Asia/Kolkata",
+    "gstin": "29AAPFU0939F1ZV",
+    "gst_status": "active",
+    "account_type": "standard"
+  }'
+```
+
+```python Python
+import requests
+
+BASE = "https://api.vobiz.ai/api/v1/partner"
+HEADERS = {
+    "X-Auth-ID": "{your_partner_id}",
+    "X-Auth-Token": "{your_auth_token}",
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+}
+
+response = requests.post(
+    f"{BASE}/accounts",
+    headers=HEADERS,
+    json={
+        "name": "Credresolve",
+        "email": "admin@credresolve.com",
+        "password": "SecurePass@123",
+        "phone": "9431538535",
+        "company": "Credresolve Private Limited",
+        "country": "IN",
+        "timezone": "Asia/Kolkata",
+    },
+)
+
+account = response.json()
+customer_auth_id = account["auth_id"]
+print(f"Created: {account['name']} — auth_id: {customer_auth_id}")
+```
+
+</CodeGroup>
+
+```json
+{
+  "auth_id": "MA_48149cf4",
+  "name": "Credresolve",
+  "email": "admin@credresolve.com",
+  "status": "active",
+  "balance": 0.00,
+  "currency": "INR",
+  "country": "IN",
+  "timezone": "Asia/Kolkata",
+  "created_at": "2026-03-25T10:00:00Z"
+}
+```
+
+---
+
+## List customer accounts
+
+**`GET https://api.vobiz.ai/api/v1/partner/accounts`**
+
+Returns all customer accounts under your partner umbrella in a paginated list. Use the `search` parameter to locate a specific customer by name or email.
+
+### Query parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number.
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Records per page. Maximum: `100`.
+</ParamField>
+
+<ParamField query="search" type="string">
+  Search by customer name or email address (partial match).
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/accounts?page=1&size=20&search=Credresolve" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "https://api.vobiz.ai/api/v1/partner/accounts",
+    headers={
+        "X-Auth-ID": "{your_partner_id}",
+        "X-Auth-Token": "{your_auth_token}",
+        "Accept": "application/json",
+    },
+    params={"page": 1, "size": 20},
+)
+
+data = response.json()
+for account in data["data"]:
+    print(account["auth_id"], account["name"], account["balance"])
+```
+
+</CodeGroup>
+
+```json
+{
+  "data": [
+    {
+      "auth_id": "MA_48149cf4",
+      "name": "Credresolve",
+      "email": "admin@credresolve.com",
+      "status": "active",
+      "balance": 2450.00,
+      "currency": "INR",
+      "created_at": "2026-03-01T10:00:00Z"
+    }
+  ],
+  "meta": {
+    "total": 47,
+    "page": 1,
+    "size": 20,
+    "total_pages": 3
+  }
+}
+```
+
+---
+
+## Get a customer account
+
+**`GET https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}`**
+
+Returns the full technical profile for a specific customer — including their auth token, billing configuration, GST details, and current status.
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```python Python
+import requests
+
+customer_auth_id = "MA_48149cf4"
+
+response = requests.get(
+    f"https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}",
+    headers={
+        "X-Auth-ID": "{your_partner_id}",
+        "X-Auth-Token": "{your_auth_token}",
+        "Accept": "application/json",
+    },
+)
+
+print(response.json())
+```
+
+</CodeGroup>
+
+```json
+{
+  "auth_id": "MA_48149cf4",
+  "auth_token": "sk_live_customer_token_here",
+  "name": "Credresolve",
+  "email": "admin@credresolve.com",
+  "phone": "9431538535",
+  "company": "Credresolve Private Limited",
+  "status": "active",
+  "balance": 2450.00,
+  "currency": "INR",
+  "gstin": "29AAPFU0939F1ZV",
+  "gst_status": "active",
+  "country": "IN",
+  "timezone": "Asia/Kolkata",
+  "created_at": "2026-03-01T10:00:00Z"
+}
+```
+
+---
+
+## Get customer balance
+
+**`GET https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/balance`**
+
+Returns the real-time wallet balance for a specific customer. Check this before deciding whether to top up a wallet. A customer with zero or near-zero balance will start experiencing call failures.
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/balance" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```python Python
+import requests
+
+customer_auth_id = "MA_48149cf4"
+
+response = requests.get(
+    f"https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/balance",
+    headers={
+        "X-Auth-ID": "{your_partner_id}",
+        "X-Auth-Token": "{your_auth_token}",
+        "Accept": "application/json",
+    },
+)
+
+balance_data = response.json()
+print(f"{balance_data['name']}: {balance_data['balance']} {balance_data['currency']}")
+```
+
+</CodeGroup>
+
+```json
+{
+  "auth_id": "MA_48149cf4",
+  "name": "Credresolve",
+  "balance": 2450.00,
+  "currency": "INR",
+  "last_updated": "2026-03-25T09:55:32Z"
+}
+```
+
+---
+
+## Customer provisioning workflow
+
+Follow this sequence when onboarding a new customer:
+
+<Steps>
+  <Step title="Create the account">
+    Call `POST /accounts` to provision the sub-account. Store the returned `auth_id` in your database as the primary foreign key.
+  </Step>
+  <Step title="Fund the wallet">
+    Call `POST /accounts/{id}/transfer-balance` to transfer an opening balance from your master account. Customers cannot make calls without balance.
+  </Step>
+  <Step title="Assign phone numbers">
+    Assign one or more DID phone numbers to the account via the Vobiz Console. Customers need a DID to receive inbound calls.
+  </Step>
+  <Step title="Monitor usage">
+    Pull CDRs and transaction logs regularly via `GET /accounts/{id}/cdrs` for billing and quality monitoring.
+  </Step>
+</Steps>

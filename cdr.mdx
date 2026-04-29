@@ -1,0 +1,236 @@
+---
+title: "Call Detail Records (CDR): Query, Filter, and Export"
+description: "Query Call Detail Records for participants, duration, direction, status, cost, and hangup cause. Filter by number and date range, or export to CSV."
+sidebarTitle: "CDR"
+---
+
+Call Detail Records (CDRs) contain everything about a completed call — participants, duration, direction, status, cost, and hangup reason. Use them for billing reconciliation, traffic analysis, fraud detection, and compliance reporting.
+
+The CDR API provides multiple endpoints depending on your use case: listing CDRs with filters, fetching a single record by call ID, searching with a filter summary, retrieving the most recent calls, or exporting data as CSV.
+
+**Authentication:** Pass `X-Auth-ID` and `X-Auth-Token` headers on every request.
+
+## Endpoints overview
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/account/{account_id}/cdr` | List all CDRs with optional filters |
+| `GET` | `/api/v1/account/{account_id}/cdr/{call_id}` | Fetch a single CDR by call ID |
+| `GET` | `/api/v1/account/{account_id}/cdr/search` | Search CDRs — same filters, adds filter summary in response |
+| `GET` | `/api/v1/account/{account_id}/cdr/recent` | Get the most recent CDRs (last 20 by default) |
+| `GET` | `/api/v1/account/{account_id}/cdr/export` | Export CDRs as a CSV file |
+
+## List CDRs
+
+`GET https://api.vobiz.ai/api/v1/account/{account_id}/cdr`
+
+Returns all CDRs for your account. Supports filtering by phone numbers, date range, call direction, duration, and pagination.
+
+<CodeGroup>
+
+```bash Basic list with date range
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/account/{account_id}/cdr?start_date=2026-03-01&end_date=2026-03-17" \
+  --header 'X-Auth-ID: {auth_id}' \
+  --header 'X-Auth-Token: {auth_token}' \
+  --header 'Accept: application/json'
+```
+
+```bash Filter by from/to number
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/account/{account_id}/cdr?from_number=9876543210&to_number=1234567890" \
+  --header 'X-Auth-ID: {auth_id}' \
+  --header 'X-Auth-Token: {auth_token}' \
+  --header 'Accept: application/json'
+```
+
+```bash Combined filters
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/account/{account_id}/cdr?from_number=9876543210&call_direction=outbound&min_duration=10&start_date=2026-03-01&end_date=2026-03-17&page=1&per_page=20" \
+  --header 'X-Auth-ID: {auth_id}' \
+  --header 'X-Auth-Token: {auth_token}' \
+  --header 'Accept: application/json'
+```
+
+</CodeGroup>
+
+## Get single CDR
+
+`GET https://api.vobiz.ai/api/v1/account/{account_id}/cdr/{call_id}`
+
+Retrieve the CDR for a specific completed call using its call ID. Use this when you have a `call_id` from a callback or previous API response and want full detail on that specific call.
+
+**Path parameters:**
+
+| Parameter | Required | Description |
+|---|---|---|
+| `account_id` | Yes | Your Vobiz account ID |
+| `call_id` | Yes | The unique call ID of the completed call |
+
+```bash
+curl --location 'https://api.vobiz.ai/api/v1/account/{auth_id}/cdr/{call_id}' \
+  --header 'X-Auth-ID: {auth_id}' \
+  --header 'X-Auth-Token: {auth_token}' \
+  --header 'Accept: application/json'
+```
+
+## Search CDRs
+
+`GET https://api.vobiz.ai/api/v1/account/{account_id}/cdr/search`
+
+Accepts the same filters as the list endpoint. The response also includes a `filter_summary` object describing the active filters applied. Useful for building search UIs where you need to display the active filter state back to the user.
+
+```bash
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/account/{account_id}/cdr/search?from_number=9876543210&to_number=1234567890&page=1&per_page=50" \
+  --header 'X-Auth-ID: {auth_id}' \
+  --header 'X-Auth-Token: {auth_token}' \
+  --header 'Accept: application/json'
+```
+
+## Recent CDRs
+
+`GET https://api.vobiz.ai/api/v1/account/{account_id}/cdr/recent`
+
+Returns the most recent CDRs without requiring a date range. Returns the last 20 records by default. Use the `limit` parameter to retrieve a larger set of recent calls quickly.
+
+```bash
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/account/{account_id}/cdr/recent?limit=50" \
+  --header 'X-Auth-ID: {auth_id}' \
+  --header 'X-Auth-Token: {auth_token}' \
+  --header 'Accept: application/json'
+```
+
+## Export as CSV
+
+`GET https://api.vobiz.ai/api/v1/account/{account_id}/cdr/export`
+
+Returns CDR data as a downloadable CSV file. Supports the same filters as the list endpoint. Use the `-o` flag in curl to save directly to a file. Ideal for billing reconciliation and offline reporting workflows.
+
+```bash
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/account/{account_id}/cdr/export?from_number=9876543210&to_number=1234567890" \
+  --header 'X-Auth-ID: {auth_id}' \
+  --header 'X-Auth-Token: {auth_token}' \
+  -o cdrs.csv
+```
+
+<Warning>
+  The export endpoint returns `text/csv` content. Do not send an `Accept: application/json` header on export requests.
+</Warning>
+
+## Query parameters
+
+### Path parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `account_id` (required) | string | Your unique Vobiz account identifier. Must match your `X-Auth-ID` header. |
+
+### Filter parameters (all endpoints)
+
+| Parameter | Type | Description |
+|---|---|---|
+| `from_number` | string | Filter by the originating phone number (e.g., `9876543210`). Matches the caller's number. |
+| `to_number` | string | Filter by the destination phone number. Matches the called number. |
+| `start_date` | string (YYYY-MM-DD) | Beginning of the search period. Required when using `end_date`. |
+| `end_date` | string (YYYY-MM-DD) | End of the search period. Required when using `start_date`. |
+| `call_direction` | string | Filter by direction: `inbound` or `outbound`. |
+| `min_duration` | integer | Minimum call duration in seconds. Excludes calls shorter than this value. |
+| `page` | integer | Page number for paginated results. Default: 1. |
+| `per_page` | integer | Records per page. Default: 20. Max: 100. |
+
+### Recent endpoint only
+
+| Parameter | Type | Description |
+|---|---|---|
+| `limit` | integer | Number of recent CDRs to return. Default: 20. |
+
+## Response format
+
+A successful request returns `200 OK` with a JSON body containing an array of call records and pagination metadata.
+
+```json
+{
+  "data": [
+    {
+      "call_id": "abc123-def456-ghi789",
+      "from_number": "+912271264217",
+      "to_number": "+919876543210",
+      "direction": "outbound",
+      "duration": 125,
+      "status": "completed",
+      "start_time": "2026-03-17T10:30:00Z",
+      "end_time": "2026-03-17T10:32:05Z",
+      "cost": 0.05,
+      "currency": "INR",
+      "trunk_id": "e3e55a78-1234-5678-90ab-cdef12345678",
+      "caller_id": "+912271264217",
+      "hangup_cause": "NORMAL_CLEARING"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_records": 150,
+    "total_pages": 8
+  }
+}
+```
+
+### Response field descriptions
+
+| Field | Type | Description |
+|---|---|---|
+| `call_id` | string | Unique identifier for the call |
+| `from_number` | string | Originating phone number (E.164 format) |
+| `to_number` | string | Destination phone number (E.164 format) |
+| `direction` | string | `inbound` or `outbound` |
+| `duration` | integer | Call length in seconds |
+| `status` | string | `completed`, `no-answer`, `busy`, or `failed` |
+| `start_time` | string (ISO 8601) | Call start timestamp in UTC |
+| `end_time` | string (ISO 8601) | Call end timestamp in UTC |
+| `cost` | number | Cost of the call |
+| `currency` | string | Currency of the cost field |
+| `trunk_id` | string | ID of the SIP trunk used for this call |
+| `caller_id` | string | Caller ID presented to the recipient |
+| `hangup_cause` | string | Reason the call ended (e.g., `NORMAL_CLEARING`, `NO_ANSWER`) |
+
+## Hangup causes
+
+When reviewing SIP call logs, you may encounter various hangup cause codes. The table below explains each code:
+
+| Status code | Description |
+|---|---|
+| `NORMAL_CLEARING` | The call ended normally — one party hung up. Standard end-of-call status. |
+| `USER_BUSY` | The called party was busy (on another call or declined the call). |
+| `NO_ANSWER` | The called party did not answer within the timeout period. |
+| `ORIGINATOR_CANCEL` | The caller hung up or cancelled before the call was answered. |
+| `CALL_REJECTED` | The call was explicitly rejected — blocking rules, spam filtering, or destination refusal. |
+| `REJECTED` | General rejection — the SIP endpoint refused the incoming INVITE. |
+| `INVALID_NUMBER` | The dialed number format is incorrect, invalid, or does not exist. |
+| `UNALLOCATED_NUMBER` | The number is formally valid but not assigned to any active subscriber. |
+| `SERVICE_UNAVAILABLE` | The destination service is temporarily unavailable (SIP 503). |
+| `SERVER_ERROR` | An internal server error occurred while routing the call. |
+| `MEDIA_TIMEOUT` | No RTP media packets received for an extended period — typically a firewall or NAT issue. |
+| `PROTOCOL_ERROR` | A SIP protocol violation or malformed message occurred during call setup. |
+| `NETWORK_OUT_OF_ORDER` | A severe network failure prevented the call from being routed. |
+| `DESTINATION_OUT_OF_ORDER` | The destination endpoint or PBX cannot accept the call — often an offline server. |
+| `NORMAL_TEMPORARY_FAILURE` | Generic temporary routing failure. Retrying may succeed. |
+| `SWITCH_CONGESTION` | The network or SIP switch is experiencing high traffic and cannot handle the call. |
+| `UNKNOWN` | An error that could not be mapped to any standard SIP or ISUP release cause code. |
+
+## Quick reference: filter support by endpoint
+
+| Parameter | `list` | `search` | `export` | `recent` |
+|---|---|---|---|---|
+| `from_number` | Yes | Yes | Yes | — |
+| `to_number` | Yes | Yes | Yes | — |
+| `start_date` | Yes | Yes | Yes | — |
+| `end_date` | Yes | Yes | Yes | — |
+| `call_direction` | Yes | Yes | Yes | — |
+| `min_duration` | Yes | Yes | Yes | — |
+| `page` | Yes | Yes | — | — |
+| `per_page` | Yes | Yes | — | — |
+| `limit` | — | — | — | Yes |

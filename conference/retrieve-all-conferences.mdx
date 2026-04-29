@@ -1,0 +1,94 @@
+---
+title: "List all active conferences in your account"
+description: "GET all active conference names on your Vobiz account. Use the names to fetch real-time state or perform operations on individual conferences."
+sidebarTitle: "List conferences"
+---
+
+Use this endpoint to get the names of all conferences currently running in your account. The response contains an array of conference name strings. To get participant details, runtime, and member states for any individual conference, use the Retrieve Conference endpoint with each returned name.
+
+**GET** `https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/`
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+No request body or query parameters are needed.
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN"
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/Conference/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN"
+}
+
+response = requests.get(url, headers=headers)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const response = await axios.get(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/Conference/`,
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response fields
+
+<ResponseField name="conferences" type="array">
+  Array of conference name strings representing all currently active conferences. Returns an empty array if no conferences are running.
+</ResponseField>
+
+<ResponseField name="api_id" type="string">
+  Unique identifier for this API request.
+</ResponseField>
+
+## Example response
+
+```json 200 OK (active conferences)
+{
+  "conferences": [
+    "Team Meeting",
+    "Sales Call",
+    "Customer Support Conference"
+  ],
+  "api_id": "816e903e-58c4-11e1-86da-adf28403fe48"
+}
+```
+
+```json 200 OK (no active conferences)
+{
+  "conferences": [],
+  "api_id": "816e903e-58c4-11e1-86da-adf28403fe48"
+}
+```
+
+<Tip>
+  After retrieving conference names, iterate through the list and call the Retrieve Conference endpoint for each name to get member count, runtime, and participant details.
+</Tip>

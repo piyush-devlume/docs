@@ -1,0 +1,108 @@
+---
+title: "Vobiz Ruby SDK — installation and usage"
+description: "Install and use the Vobiz Ruby SDK. Make calls, build VobizXML flows, manage recordings, and provision phone numbers in Ruby and Rails applications."
+sidebarTitle: "Ruby SDK"
+---
+
+The official Vobiz Ruby SDK gives you an idiomatic Ruby interface to the Vobiz Voice API. Use it to make outbound calls, respond to incoming calls with VobizXML, manage recordings, and provision phone numbers—without writing raw HTTP requests.
+
+**Source code:** [vobiz-ai/Vobiz-Ruby-SDK](https://github.com/vobiz-ai/Vobiz-Ruby-SDK)
+
+## Installation
+
+Clone the repository and install dependencies:
+
+```bash
+git clone https://github.com/vobiz-ai/Vobiz-Ruby-SDK.git
+cd Vobiz-Ruby-SDK
+bundle install
+```
+
+## Authentication
+
+Your **Auth ID** and **Auth Token** are available in the [Vobiz Console](https://console.vobiz.ai).
+
+<Tabs>
+  <Tab title="Environment variables (recommended)">
+    ```bash
+    export VOBIZ_AUTH_ID=YOUR_AUTH_ID
+    export VOBIZ_AUTH_TOKEN=YOUR_AUTH_TOKEN
+    ```
+
+    ```ruby
+    require 'vobiz'
+
+    client = Vobiz::Client.new
+    ```
+  </Tab>
+  <Tab title="Explicit credentials">
+    ```ruby
+    require 'vobiz'
+
+    client = Vobiz::Client.new('YOUR_AUTH_ID', 'YOUR_AUTH_TOKEN')
+    ```
+  </Tab>
+</Tabs>
+
+## Quick start: make an outbound call
+
+Pass your source number, destination number, and webhook URLs using Ruby symbols. When the call connects, Vobiz sends a POST to your `answer_url`. Your server must respond with valid VobizXML.
+
+```ruby
+require 'vobiz'
+
+client = Vobiz::Client.new
+
+call = client.calls.create(
+  from:          '+1xxxxxxxxxx',
+  to:            '+1xxxxxxxxxx',
+  answer_url:    'https://yourserver.com/answer',
+  answer_method: 'POST',
+  hangup_url:    'https://yourserver.com/hangup',
+  hangup_method: 'POST'
+)
+
+puts "Call UUID: #{call[:request_uuid]}"
+```
+
+## Building call flows with VobizXML
+
+The `Vobiz::XML::Response` builder generates valid VobizXML from an object-oriented API. Chain methods together to build multi-step call flows without string concatenation or manual escaping.
+
+```ruby
+require 'vobiz/xml'
+
+response = Vobiz::XML::Response.new
+response.add_speak('Welcome to Vobiz!', voice: 'WOMAN', language: 'en-US')
+response.add_record(action: 'https://yourserver.com/recording', max_length: 30)
+
+puts response.to_xml
+```
+
+## Live call control
+
+```ruby
+# Inject TTS onto a live call
+client.calls.speak_text('call-uuid', text: 'Hello from Vobiz!', voice: 'WOMAN', language: 'en-US')
+
+# List all recordings
+recordings = client.recordings.list
+recordings.each { |rec| puts rec[:recording_url] }
+```
+
+## Phone number management
+
+```ruby
+# Search for available numbers
+available = client.numbers.search(country_iso: 'US', type: 'local')
+
+# Purchase a number
+number = client.numbers.purchase(number: '+12025550123')
+puts "Purchased: #{number[:number]}"
+```
+
+## Next steps
+
+- See the [Python SDK](/integrations/python-sdk) for equivalent examples in Python.
+- See the [Node.js SDK](/integrations/node-sdk) for the JavaScript equivalent.
+- Use the [IVR example](/examples/vobiz-ivr-xml-python) to understand multi-level VobizXML call flow patterns (the example uses Python but the XML structure is identical).

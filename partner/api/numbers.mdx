@@ -1,0 +1,247 @@
+---
+title: "Partner API: Phone Number (DID) Inventory"
+sidebarTitle: "Phone numbers"
+description: "GET DID phone numbers assigned to a customer or across all accounts. Monitor allocation status, routing configuration, and expiry for your number inventory."
+---
+
+Use these endpoints to inspect the DID (Direct Inward Dialing) phone number inventory assigned to each customer, or to get a global view across all accounts. Every customer needs at least one active DID to receive inbound calls.
+
+<Note>
+  These endpoints are read-only. To assign, purchase, or release phone numbers, use the [Vobiz Partner Console](https://console.vobiz.ai) or contact [support@vobiz.ai](mailto:support@vobiz.ai) for bulk provisioning.
+</Note>
+
+## Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/partner/accounts/{customer_auth_id}/numbers` | All numbers for a specific customer |
+| `GET` | `/api/v1/partner/numbers` | All numbers across all customers (global) |
+
+---
+
+## Customer numbers
+
+**`GET https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/numbers`**
+
+Returns all phone numbers assigned to a specific customer. Use this to verify a customer's number inventory, check routing configuration, and identify the application each number is directed to.
+
+### Path parameters
+
+<ParamField path="customer_auth_id" type="string" required>
+  The `auth_id` of the customer whose numbers you want to list.
+</ParamField>
+
+### Query parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number.
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="20">
+  Records per page. Maximum: `100`.
+</ParamField>
+
+<ParamField query="search" type="string">
+  Search by number string (partial match).
+</ParamField>
+
+<ParamField query="application_id" type="string">
+  Filter numbers routed to a specific application ID.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/numbers?page=1&per_page=20" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```python Python
+import requests
+
+customer_auth_id = "MA_48149cf4"
+
+response = requests.get(
+    f"https://api.vobiz.ai/api/v1/partner/accounts/{customer_auth_id}/numbers",
+    headers={
+        "X-Auth-ID": "{your_partner_id}",
+        "X-Auth-Token": "{your_auth_token}",
+        "Accept": "application/json",
+    },
+    params={"page": 1, "per_page": 20},
+)
+
+data = response.json()
+for number in data["data"]:
+    print(number["number"], number["status"], number["application_name"])
+```
+
+</CodeGroup>
+
+```json
+{
+  "data": [
+    {
+      "number": "+912271264217",
+      "number_type": "local",
+      "country": "IN",
+      "region": "Mumbai",
+      "status": "active",
+      "application_id": "app_abc123",
+      "application_name": "Main IVR",
+      "trunk_id": "trunk_xyz",
+      "monthly_cost": 500.00,
+      "currency": "INR",
+      "assigned_at": "2026-02-01T10:00:00Z",
+      "expires_at": null
+    }
+  ],
+  "meta": {
+    "total": 3,
+    "page": 1,
+    "per_page": 20
+  }
+}
+```
+
+---
+
+## All numbers (global)
+
+**`GET https://api.vobiz.ai/api/v1/partner/numbers`**
+
+Returns all phone numbers across every customer account under your partner umbrella. Use this to audit your complete DID inventory, identify numbers without an assigned application, or find numbers that are expiring soon.
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET \
+  "https://api.vobiz.ai/api/v1/partner/numbers?page=1&per_page=50" \
+  -H "X-Auth-ID: {your_partner_id}" \
+  -H "X-Auth-Token: {your_auth_token}" \
+  -H "Accept: application/json"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "https://api.vobiz.ai/api/v1/partner/numbers",
+    headers={
+        "X-Auth-ID": "{your_partner_id}",
+        "X-Auth-Token": "{your_auth_token}",
+        "Accept": "application/json",
+    },
+    params={"page": 1, "per_page": 50},
+)
+
+data = response.json()
+print(f"Total numbers across all customers: {data['meta']['total']}")
+for number in data["data"]:
+    print(number["number"], "→", number["account_name"])
+```
+
+</CodeGroup>
+
+```json
+{
+  "data": [
+    {
+      "number": "+912271264217",
+      "account_auth_id": "MA_48149cf4",
+      "account_name": "Credresolve",
+      "status": "active",
+      "application_id": "app_abc123",
+      "monthly_cost": 500.00,
+      "currency": "INR",
+      "assigned_at": "2026-02-01T10:00:00Z"
+    },
+    {
+      "number": "+912271264218",
+      "account_auth_id": "MA_99ab12c3",
+      "account_name": "Acme Outbound",
+      "status": "active",
+      "application_id": "app_def456",
+      "monthly_cost": 500.00,
+      "currency": "INR",
+      "assigned_at": "2026-01-15T09:00:00Z"
+    }
+  ],
+  "meta": {
+    "total": 147,
+    "page": 1,
+    "per_page": 50
+  }
+}
+```
+
+---
+
+## Response fields
+
+<ResponseField name="number" type="string">
+  The phone number in E.164 format (e.g. `+912271264217`).
+</ResponseField>
+
+<ResponseField name="number_type" type="string">
+  Type of number: `local`, `tollfree`, or `mobile`.
+</ResponseField>
+
+<ResponseField name="country" type="string">
+  ISO country code of the number.
+</ResponseField>
+
+<ResponseField name="region" type="string">
+  Geographic region or area (e.g. `Mumbai`, `Delhi`).
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `active` — the number is assigned and routing calls. `suspended` — the number is paused.
+</ResponseField>
+
+<ResponseField name="application_id" type="string">
+  ID of the Vobiz application this number routes to.
+</ResponseField>
+
+<ResponseField name="application_name" type="string">
+  Display name of the routing application.
+</ResponseField>
+
+<ResponseField name="trunk_id" type="string">
+  SIP trunk this number is associated with.
+</ResponseField>
+
+<ResponseField name="monthly_cost" type="number">
+  Monthly rental cost for this number in the specified currency.
+</ResponseField>
+
+<ResponseField name="assigned_at" type="string">
+  ISO 8601 timestamp when the number was assigned to this customer.
+</ResponseField>
+
+<ResponseField name="expires_at" type="string">
+  Expiry date if applicable. `null` means the number auto-renews.
+</ResponseField>
+
+<ResponseField name="account_auth_id" type="string">
+  Customer `auth_id` owning this number. Returned by the global endpoint only.
+</ResponseField>
+
+<ResponseField name="account_name" type="string">
+  Customer display name. Returned by the global endpoint only.
+</ResponseField>
+
+---
+
+## Number management guide
+
+**Every customer needs at least one active number.** A customer with zero assigned numbers cannot receive inbound calls. After creating a customer account, assign at least one DID via the Vobiz Console immediately.
+
+**Monitor expiry dates.** Numbers with an `expires_at` value will stop routing calls if not renewed. Build a scheduled check that queries the numbers endpoint weekly and flags any numbers with `expires_at` within 14 days.
+
+**Verify application routing after number assignment.** After assigning a number, confirm the `application_id` is set. A number with a `null` `application_id` will receive calls but have no routing destination — resulting in immediate hangups for callers.
+
+**Track costs for billing.** The `monthly_cost` field gives you the DID rental cost per number. Include this alongside call usage from the CDR endpoint when generating customer invoices.

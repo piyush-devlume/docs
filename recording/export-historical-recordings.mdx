@@ -1,0 +1,202 @@
+---
+title: "Export Historical Recordings via Email"
+description: "Asynchronously export recordings matching a date range or storage duration filter. Vobiz packages the archive and delivers a download link to specified emails."
+sidebarTitle: "Export recordings"
+---
+
+Use this endpoint to export recordings matching your filter criteria. Vobiz packages the recordings as a downloadable archive and emails a download link to all specified recipients. This is an asynchronous operation — the export runs in the background and the email is typically delivered within 15–60 minutes depending on volume.
+
+**POST** `https://api.vobiz.ai/api/v1/Account/{auth_id}/export/recording/`
+
+<Warning>
+  Only one export request can run at a time per account. If an export is already in progress, the API returns a 403 error. Wait for the current export to complete before starting a new one.
+</Warning>
+
+## Path parameters
+
+<ParamField path="auth_id" type="string" required>
+  Your account Auth ID (e.g., `MA_XXXXXX`).
+</ParamField>
+
+## Body parameters
+
+### Required
+
+<ParamField body="recipient.customer_account" type="array" required>
+  Array of email addresses to receive the download link. All addresses must be valid. Example: `["admin@example.com", "backup@example.com"]`.
+</ParamField>
+
+### Date range filters (option 1)
+
+<ParamField body="from" type="string">
+  Start date for the export. Format: `YYYY-MM-DD HH:MM:SS`. Defaults to 7 days ago if not specified.
+</ParamField>
+
+<ParamField body="to" type="string">
+  End date for the export. Format: `YYYY-MM-DD HH:MM:SS`. Defaults to the current time if not specified.
+</ParamField>
+
+### Storage duration filters (option 2)
+
+Use these as an alternative to `from`/`to`. Do not combine them with date range parameters.
+
+<ParamField body="recording_storage_duration" type="string">
+  Export recordings exactly N days old. Example: `"7"` exports recordings from exactly 7 days ago.
+</ParamField>
+
+<ParamField body="recording_storage_duration__gte" type="string">
+  Export recordings N days old or older. Must be used together with `recording_storage_duration__lte`.
+</ParamField>
+
+<ParamField body="recording_storage_duration__gt" type="string">
+  Export recordings older than N days.
+</ParamField>
+
+<ParamField body="recording_storage_duration__lte" type="string">
+  Export recordings N days old or newer. Must be used together with `recording_storage_duration__gte`.
+</ParamField>
+
+<ParamField body="recording_storage_duration__lt" type="string">
+  Export recordings newer than N days.
+</ParamField>
+
+### Additional filters (only for ranges ≤ 30 days)
+
+<ParamField body="from_number" type="string">
+  Filter by caller phone number.
+</ParamField>
+
+<ParamField body="to_number" type="string">
+  Filter by destination phone number.
+</ParamField>
+
+<ParamField body="call_uuid" type="string">
+  Filter by call UUID. Also applies to conference UUID or MPC UUID.
+</ParamField>
+
+<ParamField body="conference_name" type="string">
+  Filter by conference name. Also applies to MPC name.
+</ParamField>
+
+<ParamField body="recording_format" type="string">
+  Filter by audio format. Values: `mp3`, `wav`.
+</ParamField>
+
+<ParamField body="recording_id" type="string">
+  Filter by specific recording ID.
+</ParamField>
+
+## Constraints
+
+| Rule | Detail |
+|------|--------|
+| Cannot combine `from`/`to` with storage duration filters | Use one approach or the other |
+| Cannot use `__gt` and `__gte` together | Choose one |
+| Cannot use `__lt` and `__lte` together | Choose one |
+| Maximum date range | 1 year (366 days) |
+| Maximum storage duration range | 30 days |
+| Additional filters only work for ranges ≤ 30 days | |
+| Range filters (`__gte`/`__lte`) must both be provided | |
+| Only one export can run at a time per account | |
+
+## Request examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.vobiz.ai/api/v1/Account/{Auth_ID}/export/recording/ \
+  -H "X-Auth-ID: YOUR_AUTH_ID" \
+  -H "X-Auth-Token: YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "2025-01-23 00:00:00",
+    "to": "2025-01-30 23:59:59",
+    "recipient": {
+      "customer_account": ["admin@example.com"]
+    }
+  }'
+```
+
+```python Python
+import requests
+
+auth_id = "YOUR_AUTH_ID"
+url = f"https://api.vobiz.ai/api/v1/Account/{auth_id}/export/recording/"
+headers = {
+    "X-Auth-ID": auth_id,
+    "X-Auth-Token": "YOUR_AUTH_TOKEN",
+    "Content-Type": "application/json"
+}
+payload = {
+    "from": "2025-01-23 00:00:00",
+    "to": "2025-01-30 23:59:59",
+    "recipient": {
+        "customer_account": ["admin@example.com"]
+    }
+}
+
+response = requests.post(url, headers=headers, json=payload)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const authId = "YOUR_AUTH_ID";
+const response = await axios.post(
+  `https://api.vobiz.ai/api/v1/Account/${authId}/export/recording/`,
+  {
+    from: "2025-01-23 00:00:00",
+    to: "2025-01-30 23:59:59",
+    recipient: {
+      customer_account: ["admin@example.com"],
+    },
+  },
+  {
+    headers: {
+      "X-Auth-ID": authId,
+      "X-Auth-Token": "YOUR_AUTH_TOKEN",
+      "Content-Type": "application/json",
+    },
+  }
+);
+
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Response
+
+<ResponseField name="api_id" type="string">
+  Correlation ID for this request.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `"success"` when the export has been queued.
+</ResponseField>
+
+```json 202 Accepted
+{
+  "api_id": "correlation-id-uuid",
+  "status": "success"
+}
+```
+
+```json 403 Forbidden
+{
+  "status": "failure",
+  "message": "An Export Historic Recording request is already in process. Please try again in sometime."
+}
+```
+
+```json 400 Bad Request
+{
+  "status": "failure",
+  "message": "From/To cannot be used with recording storage duration"
+}
+```
+
+<Note>
+  A 202 response means the request is queued — not that the export is complete. Check your email inbox (including spam) within 1 hour for the download link. Verify all recipient email addresses before requesting.
+</Note>
